@@ -1,0 +1,316 @@
+using System.ComponentModel;
+using System.Diagnostics;
+using System.IO;
+using System.Windows;
+using System.Windows.Threading;
+using NexoDesk.App.Services;
+using NexoDesk.App.ViewModels;
+using NexoDesk.App.Views;
+using NexoDesk.Shared.Configuration;
+using NexoDesk.Shared.Session;
+using NexoDesk.Ui;
+using NexoDesk.Ui.Controls;
+
+namespace NexoDesk.App;
+
+/// <summary>
+/// NexoDesk New: o mesmo programa para ADMIN e PC REMOTO. Interface elevada; o acesso remoto é executado pelo serviço Windows.
+/// Uso: NexoDesk New.exe [--minimized]
+/// </summary>
+public partial class App : Application
+{
+    private const string MutexName = @"Local\NexoDesk-New.Instance";
+    private const string ShowEventName = @"Local\NexoDesk-New.Show";
+
+    private Mutex? _singleInstance;
+    private EventWaitHandle? _showSignal;
+    private AppState? _state;
+    private MainWindow? _window;
+    private RemoteViewModel? _remote;
+    private AdminViewModel? _admin;
+    private TrayIcon? _tray;
+    private SessionIndicatorWindow? _indicator;
+    private bool _exiting;
+
+    protected override async void OnStartup(StartupEventArgs e)
+    {
+        base.OnStartup(e);
+        if (!new System.Security.Principal.WindowsPrincipal(System.Security.Principal.WindowsIdentity.GetCurrent())
+            .IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator))
+        {
+            MessageBox.Show("Abra o NexoDesk New como administrador.", "NexoDesk New", MessageBoxButton.OK, MessageBoxImage.Warning);
+            Shutdown(); return;
+        }
+
+        // Instância única por posse ativa do mutex (não por "quem criou o objeto"):
+        // se uma cópia anterior foi encerrada pelo gerenciador sem liberar, o mutex fica
+        // "abandonado" — nós assumimos a posse e abrimos normalmente, em vez de travar.
+        _singleInstance = new Mutex(initiallyOwned: false, MutexName);
+        bool owned;
+        try
+        {
+            owned = _singleInstance.WaitOne(TimeSpan.Zero);
+        }
+        catch (AbandonedMutexException)
+        {
+            owned = true; // dono anterior morreu sem liberar; a posse é nossa.
+        }
+        if (!owned)
+        {
+            // Uma cópia viva está rodando: pede para ela aparecer e sai.
+            try
+            {
+                using EventWaitHandle show = EventWaitHandle.OpenExisting(ShowEventName);
+                show.Set();
+            }
+            catch (WaitHandleCannotBeOpenedException)
+            {
+            }
+            _singleInstance.Dispose();
+            _singleInstance = null;
+            Shutdown();
+            return;
+        }
+        ListenForShowRequests();
+
+        DispatcherUnhandledException += OnUnhandled;
+        ThemeManager.Install(this);
+
+        try
+        {
+            _state = AppState.Load();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Não foi possível preparar o NexoDesk New neste computador.\n\n{ex.Message}",
+                "NexoDesk New", MessageBoxButton.OK, MessageBoxImage.Error);
+            Shutdown();
+            return;
+        }
+
+        if (_state.IsFirstRun)
+        {
+            var setup = new SetupWindow(new SetupViewModel(_state));
+            if (setup.ShowDialog() != true || _state.Config.Role is null)
+            {
+                Shutdown();
+                return;
+            }
+        }
+
+        bool minimized = e.Args.Any(a => string.Equals(a, "--minimized", StringComparison.OrdinalIgnoreCase));
+        await StartRoleAsync(minimized);
+    }
+
+    private async Task StartRoleAsync(bool minimized)
+    {
+        AppState state = _state!;
+        if (state.Config.Role == DeviceRole.Remote)
+        {
+            _remote = new RemoteViewModel(state, Dispatcher);
+            _window = new MainWindow(new ShellViewModel(state, _remote, SwitchRole, () => ExitAsync(forUpdate: true)));
+            _window.Closing += OnMainWindowClosing;
+            _tray = new TrayIcon(ShowWindow, () => _remote.EndSession(), () => _ = ExitAsync());
+            _remote.StatusChanged += () => _tray.Update(_remote.IsReady, _remote.HasSession, _remote.SessionAdmin);
+            _remote.SessionActivated += OnSessionActivated;
+            _remote.SessionFinished += OnSessionFinished;
+
+            if (!minimized)
+                ShowWindow();
+            await _remote.StartAsync();
+            _tray.Update(_remote.IsReady, _remote.HasSession, _remote.SessionAdmin);
+            if (minimized && !_remote.IsReady)
+                ShowWindow();
+            else if (minimized)
+                _tray.Notify("NexoDesk New", "PC REMOTO pronto. O acesso só acontece com o ADMIN pareado.");
+        }
+        else
+        {
+            await ServiceControl.ConfigureStartupAsync(false);
+            _admin = new AdminViewModel(state);
+            _window = new MainWindow(new ShellViewModel(state, _admin, SwitchRole, () => ExitAsync(forUpdate: true)));
+            _window.Closing += OnMainWindowClosing;
+            ShowWindow();
+            _admin.Initialize();
+        }
+    }
+
+    private void OnMainWindowClosing(object? sender, CancelEventArgs e)
+    {
+        if (_exiting)
+            return;
+
+        if (_remote is not null)
+        {
+            // PC REMOTO continua disponível na área de notificação.
+            e.Cancel = true;
+            _window!.Hide();
+            _tray?.Notify("NexoDesk New continua aberto", "O ADMIN ainda pode acessar este computador. Para sair, use o ícone perto do relógio.");
+            return;
+        }
+
+        if (_admin is { IsConnecting: true } || _admin is { HasOpenSessions: true })
+        {
+            bool close = NxDialogWindow.Ask(_window, new DialogOptions
+            {
+                Kind = DialogKind.Warning,
+                Title = "Fechar o NexoDesk New?",
+                Text = "Há acessos abertos. Eles serão encerrados e os PCs REMOTOS serão avisados.",
+                PrimaryText = "Fechar",
+                SecondaryText = "Continuar usando",
+                PrimaryIsDanger = true,
+            });
+            if (!close)
+            {
+                e.Cancel = true;
+                return;
+            }
+        }
+
+        e.Cancel = true;
+        _ = ExitAsync();
+    }
+
+    private void OnSessionActivated(NexoDesk.Desktop.ServiceStatus session)
+    {
+        _indicator?.CloseForSessionEnd();
+        _indicator = new SessionIndicatorWindow(() => _remote?.EndSession(), session);
+        _indicator.Show();
+    }
+
+    private void OnSessionFinished()
+    {
+        _indicator?.CloseForSessionEnd();
+        _indicator = null;
+        _tray?.Notify("NexoDesk New", "O acesso remoto foi encerrado.");
+    }
+
+    private void ShowWindow()
+    {
+        if (_window is null)
+            return;
+        _window.Show();
+        if (_window.WindowState == WindowState.Minimized)
+            _window.WindowState = WindowState.Normal;
+        _window.Activate();
+    }
+
+    private void SwitchRole()
+    {
+        if (_state is null)
+            return;
+        bool toRemote = _state.Config.Role == DeviceRole.Admin;
+        bool confirm = NxDialogWindow.Ask(_window, new DialogOptions
+        {
+            Kind = DialogKind.Warning,
+            Title = toRemote ? "Transformar este computador em PC REMOTO?" : "Transformar este computador em ADMIN?",
+            Text = toRemote
+                ? "Ele deixará de acessar outros computadores e passará a poder ser acessado pelo ADMIN pareado. O NexoDesk New será reiniciado. Os pareamentos são mantidos."
+                : "Ele deixará de poder ser acessado e passará a acessar os PCs REMOTOS. O NexoDesk New será reiniciado. Os pareamentos são mantidos.",
+            PrimaryText = "Mudar e reiniciar",
+            SecondaryText = "Cancelar",
+        });
+        if (!confirm)
+            return;
+
+        _state.Update(c => c.Role = toRemote ? DeviceRole.Remote : DeviceRole.Admin);
+        _ = ExitAsync(restart: true);
+    }
+
+    private async Task ExitAsync(bool restart = false, bool forUpdate = false)
+    {
+        if (_exiting)
+            return;
+
+        if (_remote is { HasSession: true } && !restart && !forUpdate)
+        {
+            ShowWindow();
+            bool confirm = NxDialogWindow.Ask(_window, new DialogOptions
+            {
+                Kind = DialogKind.Warning,
+                Title = "Sair do NexoDesk New?",
+                Text = $"O ADMIN \"{_remote.SessionAdmin}\" está acessando este computador. Sair encerra o acesso e o ADMIN não conseguirá mais conectar até o NexoDesk New ser aberto de novo.",
+                PrimaryText = "Encerrar e sair",
+                SecondaryText = "Continuar",
+                PrimaryIsDanger = true,
+            });
+            if (!confirm)
+                return;
+        }
+
+        _exiting = true;
+
+        // Libera a thread que escuta pedidos de "aparecer" para ela não ficar bloqueada.
+        try { _showSignal?.Set(); } catch (ObjectDisposedException) { }
+
+        foreach (SessionWindow w in Windows.OfType<SessionWindow>().ToList())
+            w.Close();
+        if (_remote is not null)
+        {
+            // Encerrar a rede/captura é melhor esforço e tem teto de tempo próprio;
+            // uma falha aqui não pode impedir o processo de morrer.
+            try { await _remote.DisposeAsync(); await ServiceControl.StopAsync(); }
+            catch (Exception ex) when (ex is IOException or ObjectDisposedException or InvalidOperationException) { }
+        }
+        _indicator?.CloseForSessionEnd();
+        _tray?.Dispose();
+        _window?.Close();
+
+        // Libera o mutex ANTES de relançar, para a nova cópia assumir a posse sem corrida.
+        ReleaseSingleInstance();
+        try { _showSignal?.Dispose(); } catch (ObjectDisposedException) { }
+
+        if (restart)
+            Process.Start(new ProcessStartInfo(AppPaths.ExecutablePath) { UseShellExecute = true });
+
+        // Encerramento determinístico: uma leitura nativa pendente (TLS/GDI) ou a janela
+        // oculta do ícone da bandeja pode manter o processo vivo depois do Shutdown(),
+        // deixando um processo "fantasma" que segura o mutex e impede reabrir. Environment.Exit
+        // garante o fim do processo em ambas as máquinas.
+        Environment.Exit(0);
+    }
+
+    private void ListenForShowRequests()
+    {
+        _showSignal = new EventWaitHandle(false, EventResetMode.AutoReset, ShowEventName);
+        var thread = new Thread(() =>
+        {
+            while (_showSignal.WaitOne())
+            {
+                if (_exiting)
+                    break;
+                Dispatcher.InvokeAsync(ShowWindow);
+            }
+        })
+        { IsBackground = true, Name = "NexoDesk.Show" };
+        thread.Start();
+    }
+
+    private void ReleaseSingleInstance()
+    {
+        if (_singleInstance is null)
+            return;
+        try { _singleInstance.ReleaseMutex(); } catch (ApplicationException) { }
+        _singleInstance.Dispose();
+        _singleInstance = null;
+    }
+
+    protected override void OnExit(ExitEventArgs e)
+    {
+        _tray?.Dispose();
+        ReleaseSingleInstance();
+        base.OnExit(e);
+    }
+
+    private void OnUnhandled(object sender, DispatcherUnhandledExceptionEventArgs e)
+    {
+        e.Handled = true;
+        string text = $"Erro inesperado: {e.Exception.GetType().Name}: {e.Exception.Message}";
+        if (_remote is not null)
+            _remote.AddLog(LogLevel.Error, text);
+        else if (_admin is not null)
+            _admin.AddLog(LogLevel.Error, text);
+        else
+            MessageBox.Show(text, "NexoDesk New", MessageBoxButton.OK, MessageBoxImage.Error);
+    }
+}

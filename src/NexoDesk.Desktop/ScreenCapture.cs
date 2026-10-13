@@ -1,0 +1,255 @@
+using System.ComponentModel;
+using System.Diagnostics;
+using System.Drawing;
+using System.Drawing.Imaging;
+using System.IO;
+using System.Runtime.InteropServices;
+using NexoDesk.Shared.Messages;
+using NexoDesk.Shared.Session;
+
+namespace NexoDesk.Desktop;
+
+/// <summary>
+/// Captura a tela do PC REMOTO com GDI (CopyFromScreen) e envia como JPEG. Funciona na sessão do usuário
+/// desbloqueada; a tela de bloqueio/login é a etapa do serviço. Pula frames idênticos ao anterior.
+/// </summary>
+public sealed class GdiScreenCapture(Func<int> maxFps, Func<int> jpegQuality, bool compositeCursor = false) : IDisplaySource, IFrameSource, ICursorSource, IDisposable
+{
+    private readonly ImageCodecInfo _jpegCodec = ImageCodecInfo.GetImageEncoders().First(c => c.FormatID == ImageFormat.Jpeg.Guid);
+    private readonly object _gate = new();
+    private Bitmap? _bitmap;
+    private Size _size;
+    private ulong _lastHash;
+    private long _nextTicks;
+
+    public DisplayInfoMessage GetDisplayInfo()
+    {
+        Size size = PrimarySize();
+        uint dpi = GetDpiForSystem();
+        return new DisplayInfoMessage(size.Width, size.Height, dpi == 0 ? 1.0 : dpi / 96.0);
+    }
+
+    /// <summary>Posição do cursor na tela primária, normalizada 0..1. Visible=false quando oculto.</summary>
+    public CursorSample GetCursor()
+    {
+        var ci = new CURSORINFO { cbSize = Marshal.SizeOf<CURSORINFO>() };
+        if (!GetCursorInfo(ref ci) || ci.flags != CURSOR_SHOWING)
+            return new CursorSample(0, 0, Visible: false);
+
+        Size size = PrimarySize();
+        double x = Math.Clamp((double)ci.ptScreenPos.X / size.Width, 0, 1);
+        double y = Math.Clamp((double)ci.ptScreenPos.Y / size.Height, 0, 1);
+        return new CursorSample(x, y, Visible: true);
+    }
+
+    public async Task<VideoFrame?> NextFrameAsync(uint frameIndex, CancellationToken ct)
+    {
+        int fps = Math.Clamp(maxFps(), 1, 30);
+        long interval = Stopwatch.Frequency / fps;
+
+        // Mantém o ritmo-alvo sem acumular atraso.
+        long now = Stopwatch.GetTimestamp();
+        if (_nextTicks == 0 || now - _nextTicks > interval * 4)
+            _nextTicks = now;
+        long wait = _nextTicks + interval - now;
+        _nextTicks += interval;
+        if (wait > 0)
+            await Task.Delay(TimeSpan.FromSeconds((double)wait / Stopwatch.Frequency), ct).ConfigureAwait(false);
+
+        return await Task.Run(() => CaptureFrame(frameIndex), ct).ConfigureAwait(false);
+    }
+
+    public void Reset()
+    {
+        lock (_gate)
+        {
+            _bitmap?.Dispose();
+            _bitmap = null;
+            _lastHash = 0;
+            _nextTicks = 0;
+        }
+    }
+
+    public void Dispose() => Reset();
+
+    /// <summary>A thread do desktop só copia pixels; compressão ocorre fora dela para priorizar a entrada.</summary>
+    public ScreenSnapshot? CapturePixels()
+    {
+        lock (_gate)
+        {
+            Size size = PrimarySize();
+            if ((long)size.Width * size.Height > DesktopUpdate.MaxScreenPixels)
+                throw new InvalidOperationException("Resolução acima do limite de captura.");
+            if (_bitmap is null || _size != size)
+            {
+                _bitmap?.Dispose();
+                _bitmap = new Bitmap(size.Width, size.Height, PixelFormat.Format32bppRgb);
+                _size = size;
+                _lastHash = 0;
+            }
+            try
+            {
+                using Graphics graphics = Graphics.FromImage(_bitmap);
+                graphics.CopyFromScreen(0, 0, 0, 0, size, CopyPixelOperation.SourceCopy);
+            }
+            catch (Exception ex) when (ex is Win32Exception or InvalidOperationException or ExternalException) { return null; }
+            byte[] buffer = System.Buffers.ArrayPool<byte>.Shared.Rent(checked(size.Width * size.Height * 4));
+            BitmapData? data = null;
+            try
+            {
+                data = _bitmap.LockBits(new Rectangle(Point.Empty, size), ImageLockMode.ReadOnly, PixelFormat.Format32bppRgb);
+                for (int row = 0; row < size.Height; row++)
+                    Marshal.Copy(IntPtr.Add(data.Scan0, row * data.Stride), buffer, row * size.Width * 4, size.Width * 4);
+                return new(size.Width, size.Height, buffer);
+            }
+            catch { System.Buffers.ArrayPool<byte>.Shared.Return(buffer); throw; }
+            finally { if (data is not null) _bitmap.UnlockBits(data); }
+        }
+    }
+    public VideoFrame? Capture(uint frameIndex) => CaptureFrame(frameIndex);
+
+    private VideoFrame? CaptureFrame(uint frameIndex)
+    {
+        lock (_gate)
+        {
+            Size size = PrimarySize();
+            if (_bitmap is null || _size != size)
+            {
+                _bitmap?.Dispose();
+                _bitmap = new Bitmap(size.Width, size.Height, PixelFormat.Format32bppRgb);
+                _size = size;
+                _lastHash = 0;
+            }
+
+            long cursorKey = 0;
+            try
+            {
+                using Graphics g = Graphics.FromImage(_bitmap);
+                g.CopyFromScreen(0, 0, 0, 0, size, CopyPixelOperation.SourceCopy);
+                // Por padrão o cursor NÃO entra na imagem: ele vai em mensagens leves (CursorUpdate)
+                // e o ADMIN o desenha por cima. Assim mover o mouse não re-encoda a tela inteira.
+                if (compositeCursor)
+                    cursorKey = DrawCursor(g);
+            }
+            catch (Exception ex) when (ex is Win32Exception or InvalidOperationException or ExternalException)
+            {
+                // Tela de bloqueio / desktop seguro: não dá para capturar na sessão do usuário. Mantém o último frame.
+                return null;
+            }
+
+            // Sem o cursor na imagem, só mudanças reais de tela geram frame novo (cursorKey=0).
+            ulong hash = HashPixels(_bitmap) ^ (ulong)cursorKey;
+            if (hash == _lastHash)
+                return null;
+            _lastHash = hash;
+
+            byte[] jpeg = Encode(_bitmap, Math.Clamp(jpegQuality(), 10, 95));
+            if (jpeg.Length > VideoFrame.MaxJpegBytes)
+                return null;
+            long timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            return new VideoFrame(frameIndex, timestamp, size.Width, size.Height, jpeg);
+        }
+    }
+
+    /// <summary>Desenha o cursor atual na imagem e devolve uma chave da posição (para o hash). 0 se oculto.</summary>
+    private static long DrawCursor(Graphics g)
+    {
+        var ci = new CURSORINFO { cbSize = Marshal.SizeOf<CURSORINFO>() };
+        if (!GetCursorInfo(ref ci) || ci.flags != CURSOR_SHOWING || ci.hCursor == IntPtr.Zero)
+            return 0;
+
+        int x = ci.ptScreenPos.X;
+        int y = ci.ptScreenPos.Y;
+        if (GetIconInfo(ci.hCursor, out ICONINFO info))
+        {
+            if (info.hbmMask != IntPtr.Zero) DeleteObject(info.hbmMask);
+            if (info.hbmColor != IntPtr.Zero) DeleteObject(info.hbmColor);
+            x -= info.xHotspot;
+            y -= info.yHotspot;
+        }
+
+        IntPtr hdc = g.GetHdc();
+        try
+        {
+            DrawIconEx(hdc, x, y, ci.hCursor, 0, 0, 0, IntPtr.Zero, DI_NORMAL);
+        }
+        finally
+        {
+            g.ReleaseHdc(hdc);
+        }
+        return ((long)(ci.ptScreenPos.X & 0xFFFF) << 16) | (uint)(ci.ptScreenPos.Y & 0xFFFF);
+    }
+
+    private byte[] Encode(Bitmap bitmap, int quality)
+    {
+        using var p = new EncoderParameters(1);
+        p.Param[0] = new EncoderParameter(Encoder.Quality, (long)quality);
+        using var ms = new MemoryStream(64 * 1024);
+        bitmap.Save(ms, _jpegCodec, p);
+        return ms.ToArray();
+    }
+
+    /// <summary>FNV-1a sobre os bytes da imagem; detecta telas idênticas para não reenviar.</summary>
+    private static ulong HashPixels(Bitmap bitmap)
+    {
+        BitmapData data = bitmap.LockBits(new Rectangle(Point.Empty, bitmap.Size), ImageLockMode.ReadOnly, PixelFormat.Format32bppRgb);
+        try
+        {
+            int bytes = Math.Abs(data.Stride) * data.Height;
+            ulong hash = 1469598103934665603UL;
+            unsafe
+            {
+                byte* p = (byte*)data.Scan0;
+                // Amostra 1 byte a cada 7 para ganhar velocidade sem perder sensibilidade útil.
+                for (int i = 0; i < bytes; i += 7)
+                {
+                    hash ^= p[i];
+                    hash *= 1099511628211UL;
+                }
+            }
+            return hash;
+        }
+        finally
+        {
+            bitmap.UnlockBits(data);
+        }
+    }
+
+    private static Size PrimarySize() => new(Math.Max(GetSystemMetrics(0), 1), Math.Max(GetSystemMetrics(1), 1));
+
+    [DllImport("user32.dll")]
+    private static extern int GetSystemMetrics(int index);
+
+    [DllImport("user32.dll")]
+    private static extern uint GetDpiForSystem();
+
+    // --- Cursor ---
+    private const int CURSOR_SHOWING = 1;
+    private const int DI_NORMAL = 3;
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct POINT { public int X; public int Y; }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct CURSORINFO { public int cbSize; public int flags; public IntPtr hCursor; public POINT ptScreenPos; }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct ICONINFO { public bool fIcon; public int xHotspot; public int yHotspot; public IntPtr hbmMask; public IntPtr hbmColor; }
+
+    [DllImport("user32.dll")]
+    private static extern bool GetCursorInfo(ref CURSORINFO pci);
+
+    [DllImport("user32.dll")]
+    private static extern bool GetIconInfo(IntPtr hIcon, out ICONINFO piconinfo);
+
+    [DllImport("user32.dll")]
+    private static extern bool DrawIconEx(IntPtr hdc, int x, int y, IntPtr hIcon, int w, int h, int step, IntPtr brush, int flags);
+
+    [DllImport("gdi32.dll")]
+    private static extern bool DeleteObject(IntPtr obj);
+}
+
+public sealed record ScreenSnapshot(int Width, int Height, byte[] Pixels) : IDisposable
+{
+    public void Dispose() => System.Buffers.ArrayPool<byte>.Shared.Return(Pixels);
+}

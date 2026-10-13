@@ -1,0 +1,143 @@
+<ui:NxWindow x:Class="NexoDesk.App.Views.SessionWindow"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:ui="clr-namespace:NexoDesk.Ui.Controls;assembly=NexoDesk.Ui"
+             xmlns:vm="clr-namespace:NexoDesk.App.ViewModels"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=vm:SessionViewModel}"
+             Title="{Binding Title}"
+             Tagline="{Binding Tagline}"
+             Width="1280" Height="800" MinWidth="640" MinHeight="420"
+             WindowStartupLocation="CenterScreen">
+
+    <ui:NxWindow.TitleBarContent>
+        <StackPanel Orientation="Horizontal">
+            <ui:NxBadge Kind="{Binding StateKind}" ShowDot="True" Content="{Binding StateText}" Margin="0,0,12,0" />
+            <TextBlock VerticalAlignment="Center" Foreground="{DynamicResource Nx.OnNavyMuted}" FontSize="12" Margin="0,0,12,0">
+                <Run Text="Latência" /> <Run Text="{Binding LatencyText, Mode=OneWay}" Foreground="{DynamicResource Nx.OnNavy}" />
+                <Run Text="  ·  FPS" /> <Run Text="{Binding FpsText, Mode=OneWay}" Foreground="{DynamicResource Nx.OnNavy}" />
+                <Run Text="  ·  " /><Run Text="{Binding DataRateText, Mode=OneWay}" Foreground="{DynamicResource Nx.OnNavy}" />
+            </TextBlock>
+            <ToggleButton x:Name="ActualScale" Content="100%" ToolTip="Mostrar pixels em tamanho real; desmarque para ajustar à janela." Click="OnToggleScale" Margin="0,0,8,0" Padding="10,4" />
+            <Button Style="{DynamicResource Nx.Button.Navy}" Content="Desconectar" Command="{Binding DisconnectCommand}" Margin="0,0,4,0" />
+        </StackPanel>
+    </ui:NxWindow.TitleBarContent>
+
+    <ui:NxWindow.FooterContent>
+        <TextBlock>
+            <Run Text="{Binding ServerName, Mode=OneWay}" /> <Run Text="·" /> <Run Text="{Binding Protocol, Mode=OneWay}" />
+            <Run Text="·" /> <Run Text="Agent" /> <Run Text="{Binding AgentVersion, Mode=OneWay}" />
+            <Run Text="·" /> <Run Text="Sessão" /> <Run Text="{Binding SessionId, Mode=OneWay}" FontFamily="{DynamicResource Nx.Mono}" />
+        </TextBlock>
+    </ui:NxWindow.FooterContent>
+
+    <ui:NxWindow.FooterRightContent>
+        <TextBlock>
+            <Run Text="Modo:" /> <Run Text="{Binding ModeText, Mode=OneWay}" Foreground="{DynamicResource Nx.OnNavy}" />
+        </TextBlock>
+    </ui:NxWindow.FooterRightContent>
+
+    <Grid Background="#05070C" ClipToBounds="True">
+        <!-- Vídeo remoto: ajustado à área útil, sem distorção -->
+        <ScrollViewer x:Name="VideoScroll" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Disabled"
+                      HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" ScrollChanged="OnVideoScroll">
+            <Image x:Name="RemoteImage" Source="{Binding Frame}" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality" SnapsToDevicePixels="True" UseLayoutRounding="True" Focusable="True" />
+        </ScrollViewer>
+
+        <!-- Ponteiro do PC REMOTO: desenhado por cima da imagem, posicionado no código. -->
+        <Canvas x:Name="CursorLayer" IsHitTestVisible="False">
+            <Path x:Name="CursorArrow" Visibility="Collapsed"
+                  Data="M0,0 L0,16 L4,12 L7,19 L9.5,18 L6.5,11 L11,11 Z"
+                  Fill="White" Stroke="#101317" StrokeThickness="1" StrokeLineJoin="Round">
+                <Path.Effect>
+                    <DropShadowEffect Color="#000000" BlurRadius="3" ShadowDepth="0" Opacity="0.6" />
+                </Path.Effect>
+            </Path>
+        </Canvas>
+
+        <!-- Aviso: conectado em "Só ver" (mouse/teclado não comandam) -->
+        <Border VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,12,0,0" CornerRadius="10" Padding="16,8"
+                Background="{DynamicResource Nx.WarningSoft}" BorderBrush="{DynamicResource Nx.WarningBorder}" BorderThickness="1">
+            <Border.Visibility>
+                <Binding Path="ViewOnly" Converter="{StaticResource BoolToVisibility}" />
+            </Border.Visibility>
+            <TextBlock Foreground="{DynamicResource Nx.WarningText}" FontSize="12.5" TextWrapping="Wrap"
+                       Text="Você está só vendo. Para usar mouse e teclado, desconecte e conecte de novo no modo Controlar." />
+        </Border>
+
+        <!-- Conectado, ainda sem vídeo -->
+        <Border HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="520" Padding="28,26">
+            <Border.Style>
+                <Style TargetType="Border" BasedOn="{StaticResource Nx.Card}">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding ShowWaiting}" Value="True">
+                            <Setter Property="Visibility" Value="Visible" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+            <StackPanel>
+                <Border Width="44" Height="44" CornerRadius="22" Background="{DynamicResource Nx.SuccessSoft}" HorizontalAlignment="Center" Margin="0,0,0,12">
+                    <TextBlock FontFamily="{DynamicResource Nx.Icons}" Text="&#xE72E;" FontSize="18" Foreground="{DynamicResource Nx.Success}"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Border>
+                <TextBlock HorizontalAlignment="Center" FontSize="16" FontWeight="SemiBold">
+                    <Run Text="Conexão segura com" /> <Run Text="{Binding ServerName, Mode=OneWay}" />
+                </TextBlock>
+                <TextBlock Style="{DynamicResource Nx.Muted}" TextAlignment="Center" Margin="0,6,0,18"
+                           Text="Conectado. Aguardando a primeira imagem do desktop remoto." />
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="120" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="26" />
+                        <RowDefinition Height="26" />
+                        <RowDefinition Height="26" />
+                        <RowDefinition Height="26" />
+                    </Grid.RowDefinitions>
+                    <TextBlock Style="{DynamicResource Nx.FieldLabel}" Text="PC REMOTO" />
+                    <TextBlock Grid.Column="1" VerticalAlignment="Center" Text="{Binding ServerId}" FontFamily="{DynamicResource Nx.Mono}" FontSize="12" />
+                    <TextBlock Grid.Row="1" Style="{DynamicResource Nx.FieldLabel}" Text="Certificado" />
+                    <TextBlock Grid.Row="1" Grid.Column="1" VerticalAlignment="Center" FontFamily="{DynamicResource Nx.Mono}" FontSize="12">
+                        <Run Text="{Binding Fingerprint, Mode=OneWay}" /><Run Text="… (conferido)" Foreground="{DynamicResource Nx.SuccessText}" />
+                    </TextBlock>
+                    <TextBlock Grid.Row="2" Style="{DynamicResource Nx.FieldLabel}" Text="Canal" />
+                    <TextBlock Grid.Row="2" Grid.Column="1" VerticalAlignment="Center" Text="{Binding Protocol}" />
+                    <TextBlock Grid.Row="3" Style="{DynamicResource Nx.FieldLabel}" Text="Tela remota" />
+                    <TextBlock Grid.Row="3" Grid.Column="1" VerticalAlignment="Center" Text="{Binding DisplayText}" />
+                </Grid>
+            </StackPanel>
+        </Border>
+
+        <!-- Sessão encerrada -->
+        <Border HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="480" Padding="28,26">
+            <Border.Style>
+                <Style TargetType="Border" BasedOn="{StaticResource Nx.Card}">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsEnded}" Value="True">
+                            <Setter Property="Visibility" Value="Visible" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+            <StackPanel>
+                <Border Width="44" Height="44" CornerRadius="22" Background="{DynamicResource Nx.WarningSoft}" HorizontalAlignment="Center" Margin="0,0,0,12">
+                    <TextBlock FontFamily="{DynamicResource Nx.Icons}" Text="&#xE7BA;" FontSize="18" Foreground="{DynamicResource Nx.Warning}"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Border>
+                <TextBlock HorizontalAlignment="Center" FontSize="16" FontWeight="SemiBold" Text="Sessão encerrada" />
+                <TextBlock Style="{DynamicResource Nx.Muted}" TextAlignment="Center" Margin="0,6,0,20" Text="{Binding EndReason}" />
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                    <Button Style="{DynamicResource Nx.Button}" Content="Fechar" Command="{Binding CloseCommand}" Margin="0,0,10,0" />
+                    <Button Style="{DynamicResource Nx.Button.Primary}" Content="Reconectar" Command="{Binding ReconnectCommand}" />
+                </StackPanel>
+            </StackPanel>
+        </Border>
+    </Grid>
+</ui:NxWindow>

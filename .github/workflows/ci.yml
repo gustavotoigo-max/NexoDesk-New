@@ -1,0 +1,72 @@
+name: Compilar, testar e publicar versão
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: windows-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Conferir versão
+        id: version
+        shell: pwsh
+        run: |
+          [xml]$props = Get-Content Directory.Build.props
+          $version = [string]$props.Project.PropertyGroup.Version
+          if ($version -notmatch '^\d+\.\d+\.\d+$') { throw 'Use versão X.Y.Z.' }
+          if ($env:GITHUB_REF_TYPE -eq 'tag' -and $env:GITHUB_REF_NAME -ne ("v" + $version)) {
+            throw 'A tag deve corresponder à versão do projeto.'
+          }
+          "version=$version" >> $env:GITHUB_OUTPUT
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: Compilar, testar e gerar instalador
+        shell: pwsh
+        run: |
+          $compiler = Join-Path ([Environment]::GetEnvironmentVariable('ProgramFiles(x86)')) 'Inno Setup 6\ISCC.exe'
+          if (-not (Test-Path $compiler)) {
+            choco install innosetup --no-progress -y
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+          ./scripts/Build-Installer.ps1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NexoDesk-New-Setup-${{ steps.version.outputs.version }}
+          path: |
+            artifacts/NexoDesk-New-Setup-${{ steps.version.outputs.version }}.exe
+            artifacts/NexoDesk-New-Setup-${{ steps.version.outputs.version }}.exe.sha256
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Resultados-dos-testes
+          path: tests/**/TestResults/*.trx
+          if-no-files-found: ignore
+  release:
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+    needs: validate
+    runs-on: windows-latest
+    concurrency:
+      group: release-${{ needs.validate.outputs.version }}
+      cancel-in-progress: false
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: NexoDesk-New-Setup-${{ needs.validate.outputs.version }}
+          path: artifacts
+      - name: Criar release por versão, sem sobrescrever anteriores
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: ./scripts/Publish-Release.ps1 -Commit $env:GITHUB_SHA

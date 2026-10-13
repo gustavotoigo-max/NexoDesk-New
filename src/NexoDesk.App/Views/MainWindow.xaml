@@ -1,0 +1,68 @@
+<ui:NxWindow x:Class="NexoDesk.App.Views.MainWindow"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:ui="clr-namespace:NexoDesk.Ui.Controls;assembly=NexoDesk.Ui"
+             xmlns:vm="clr-namespace:NexoDesk.App.ViewModels"
+             xmlns:views="clr-namespace:NexoDesk.App.Views"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=vm:ShellViewModel}"
+             Title="NexoDesk New"
+             Tagline="{Binding Tagline}"
+             Width="1080" Height="780" MinWidth="820" MinHeight="560"
+             WindowStartupLocation="CenterScreen">
+
+    <ui:NxWindow.Resources>
+        <DataTemplate DataType="{x:Type vm:AdminViewModel}">
+            <views:AdminView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:RemoteViewModel}">
+            <views:RemoteView />
+        </DataTemplate>
+    </ui:NxWindow.Resources>
+
+    <ui:NxWindow.TitleBarContent>
+        <ui:NxPill Content="{Binding ModeText}" Margin="0,0,4,0" />
+    </ui:NxWindow.TitleBarContent>
+
+    <ui:NxWindow.FooterContent>
+        <TextBlock>
+            <Run Text="Nexotool · NexoDesk New" /> <Run Text="{Binding Version, Mode=OneWay}" />
+            <Run Text="  ·  Este computador:" /> <Run Text="{Binding DeviceName, Mode=OneWay}" Foreground="{DynamicResource Nx.OnNavy}" />
+        </TextBlock>
+    </ui:NxWindow.FooterContent>
+
+    <ui:NxWindow.FooterRightContent>
+        <StackPanel Orientation="Horizontal">
+            <Button Style="{DynamicResource Nx.FooterLink}" Content="Configurações" Click="OnOpenSettings" />
+            <TextBlock Text="·" Margin="10,0" Foreground="{DynamicResource Nx.OnNavyMuted}" />
+            <Button Style="{DynamicResource Nx.FooterLink}" Content="Pasta de registros" Command="{Binding OpenLogsCommand}" />
+        </StackPanel>
+    </ui:NxWindow.FooterRightContent>
+
+    <DockPanel>
+        <!-- Aviso de atualização disponível -->
+        <Border DockPanel.Dock="Top" Background="{DynamicResource Nx.InfoSoft}" BorderBrush="{DynamicResource Nx.InfoBorder}"
+                BorderThickness="0,0,0,1" Padding="28,10">
+            <Border.Visibility>
+                <Binding Path="Update.Available" Converter="{StaticResource BoolToVisibility}" />
+            </Border.Visibility>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock FontFamily="{DynamicResource Nx.Icons}" Text="&#xE896;" FontSize="15" Foreground="{DynamicResource Nx.Info}" VerticalAlignment="Center" Margin="0,0,12,0" />
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding Update.AvailableText}" FontWeight="SemiBold" FontSize="13" Foreground="{DynamicResource Nx.Text}" />
+                    <TextBlock Text="{Binding Update.Status}" FontSize="12" Foreground="{DynamicResource Nx.TextMuted}" />
+                </StackPanel>
+                <Button Grid.Column="2" Style="{DynamicResource Nx.Button.Primary.Small}" Content="Baixar e instalar" Command="{Binding Update.InstallCommand}" VerticalAlignment="Center" />
+            </Grid>
+        </Border>
+
+        <ContentControl Content="{Binding Content}" Focusable="False" />
+    </DockPanel>
+</ui:NxWindow>
