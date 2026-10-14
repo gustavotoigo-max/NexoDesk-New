@@ -2,7 +2,7 @@
 
 ## Executado localmente
 
-- Compilação Release sem erros/avisos; 227 testes aprovados na 1.4.0 (140 unitários, 30 de integração e 57 Windows).
+- Compilação Release sem erros/avisos; 227 testes aprovados na 1.4.1 (140 unitários, 30 de integração e 57 Windows).
 - Framing, mensagens, estados, certificados e configuração.
 - TLS mútuo real em loopback, pareamento, streaming e sessão única.
 - Senha correta/incorreta/ausente e prova vinculada a nonce/certificados/modo.
@@ -27,7 +27,7 @@
 
 CI inicialmente encontrou uma corrida no teste de mouse/teclado: fechar o TLS logo após enviar não confirma processamento remoto. O fixture agora sinaliza a entrada recebida antes do encerramento, mantendo a verificação de ordem e liberação de teclas; código de sessão/transmissão preservado.
 
-TRX em tests/*/TestResults. Log final da entrega em artifacts/build-1.4.0.log.
+TRX em tests/*/TestResults. Log final da entrega em artifacts/build-1.4.1.log.
 
 ## Confirmado pelo usuário
 
@@ -39,6 +39,7 @@ TRX em tests/*/TestResults. Log final da entrega em artifacts/build-1.4.0.log.
 
 O ambiente de execução do desenvolvimento não tem token elevado do Windows. Não foram instalados serviços, certificados de máquina ou regras de firewall no PC do usuário.
 
+- [ ] ADMIN: confirmar ícone na bandeja sem conexão, em modo Ver a tela/Controlar, em mais de um remoto, após queda/desconexão e com janela de sessão encerrada ainda aberta. Conferir duplo clique, Encerrar todas as conexões e Sair; ícone deve ser removido na saída.
 - [ ] Confirmar primeira abertura elevada pelo instalador sem erro.
 - [ ] Confirmar consulta a cada minuto e atualização manual; faixa somente para versão superior.
 - [ ] Sair pela bandeja e conferir ausência de interface/supervisor/agente, mantendo Tailscale. Reabrir e repetir após atualização com sessão ativa.
@@ -60,4 +61,4 @@ O ambiente de execução do desenvolvimento não tem token elevado do Windows. N
 
 GDI/blocos Brotli sem perda implementados; JPEG permanece para negociação com versões antigas. DXGI/H.264 e medições em redes reais não foram executados. Conteúdo protegido pode não ser capturado. Sem Ctrl+Alt+Del, áudio, arquivos, clipboard ou múltiplos monitores.
 
-Instalador 1.4.0 sem assinatura, com runtime e SHA-256 verificados; publicação no GitHub pelo workflow de compilação, testes e release. Instaladores 1.1.0, 1.2.0 e 1.2.1 preservados. Novo motor experimental não implementado nesta entrega.
+Instalador 1.4.1 sem assinatura, com runtime e SHA-256 verificados; publicação no GitHub pelo workflow de compilação, testes e release. Instaladores 1.1.0, 1.2.0 e 1.2.1 preservados. Novo motor experimental não implementado nesta entrega.

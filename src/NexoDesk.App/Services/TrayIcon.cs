@@ -5,7 +5,7 @@ using WinForms = System.Windows.Forms;
 
 namespace NexoDesk.App.Services;
 
-/// <summary>Ícone na área de notificação com o estado do Agent e o menu Abrir / Encerrar acesso / Sair.</summary>
+/// <summary>Ícone na área de notificação: conexões do ADMIN ou acesso ativo no PC REMOTO.</summary>
 public sealed class TrayIcon : IDisposable
 {
     private readonly WinForms.NotifyIcon _icon;
@@ -14,17 +14,17 @@ public sealed class TrayIcon : IDisposable
     private readonly Icon _activeIcon;
     private bool _disposed;
 
-    public TrayIcon(Action open, Action endSession, Action exit)
+    public TrayIcon(Action open, Action endSession, Action exit, bool isAdmin = false)
     {
         _idleIcon = DrawIcon(active: false);
         _activeIcon = DrawIcon(active: true);
 
         var menu = new WinForms.ContextMenuStrip();
         menu.Items.Add("Abrir NexoDesk New", null, (_, _) => open());
-        _endItem = new WinForms.ToolStripMenuItem("Encerrar acesso remoto", null, (_, _) => endSession()) { Enabled = false };
+        _endItem = new WinForms.ToolStripMenuItem(isAdmin ? "Encerrar todas as conexões" : "Encerrar acesso remoto", null, (_, _) => endSession()) { Enabled = false };
         menu.Items.Add(_endItem);
         menu.Items.Add(new WinForms.ToolStripSeparator());
-        menu.Items.Add("Sair e encerrar o serviço", null, (_, _) => exit());
+        menu.Items.Add(isAdmin ? "Sair do NexoDesk New" : "Sair e encerrar o serviço", null, (_, _) => exit());
 
         _icon = new WinForms.NotifyIcon
         {
@@ -38,14 +38,28 @@ public sealed class TrayIcon : IDisposable
 
     public void Update(bool listening, bool inSession, string? admin)
     {
-        if (_disposed)
-            return;
-        bool active = inSession;
-        _icon.Icon = active ? _activeIcon : _idleIcon;
-        _endItem.Enabled = active;
         string text = inSession ? $"NexoDesk New — acesso ativo ({admin})"
             : listening ? "NexoDesk New PC REMOTO — aguardando o ADMIN"
             : "NexoDesk New PC REMOTO — parado (abra para ver o motivo)";
+        SetState(inSession, text);
+    }
+
+    public void UpdateAdmin(IReadOnlyList<string> remoteNames)
+    {
+        string text = remoteNames.Count switch
+        {
+            0 => "NexoDesk New ADMIN — sem conexão ativa",
+            1 => $"NexoDesk New ADMIN — conectado a {remoteNames[0]}",
+            _ => $"NexoDesk New ADMIN — {remoteNames.Count} conexões ativas",
+        };
+        SetState(remoteNames.Count > 0, text);
+    }
+
+    private void SetState(bool active, string text)
+    {
+        if (_disposed) return;
+        _icon.Icon = active ? _activeIcon : _idleIcon;
+        _endItem.Enabled = active;
         _icon.Text = text.Length > 63 ? text[..63] : text; // limite do Windows
     }
 

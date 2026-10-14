@@ -139,7 +139,10 @@ public partial class App : Application
             _admin = new AdminViewModel(state);
             _window = new MainWindow(new ShellViewModel(state, _admin, SwitchRole, () => ExitAsync(forUpdate: true)));
             _window.Closing += OnMainWindowClosing;
-            ShowWindow();
+            _tray = new TrayIcon(ShowWindow, EndAdminSessions, () => _ = ExitAsync(), isAdmin: true);
+            _admin.ActiveSessionsChanged += UpdateAdminTray;
+            UpdateAdminTray();
+            if (!minimized) ShowWindow();
             _admin.Initialize();
         }
     }
@@ -178,6 +181,18 @@ public partial class App : Application
 
         e.Cancel = true;
         _ = ExitAsync();
+    }
+
+    private void UpdateAdminTray()
+    {
+        if (_admin is not null) _tray?.UpdateAdmin(_admin.ActiveSessionNames);
+    }
+
+    private void EndAdminSessions()
+    {
+        _admin?.CancelConnectCommand.Execute(null);
+        foreach (SessionWindow window in Windows.OfType<SessionWindow>().ToList())
+            if (window.DataContext is SessionViewModel { IsActive: true }) window.Close();
     }
 
     private void OnSessionActivated(NexoDesk.Desktop.ServiceStatus session)
@@ -255,6 +270,7 @@ public partial class App : Application
         _exiting = true;
         if (_window is not null) _window.IsEnabled = false;
 
+        _admin?.CancelConnectCommand.Execute(null);
         foreach (SessionWindow w in Windows.OfType<SessionWindow>().ToList())
             w.Close();
         // Suspende as consultas antes de parar os processos em qualquer papel.

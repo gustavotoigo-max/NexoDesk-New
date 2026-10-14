@@ -14,15 +14,15 @@ Acesso remoto privado para até cinco PCs Windows x64. Um aplicativo e um instal
 - Atualizações consultadas ao abrir/a cada minuto e pelo botão Atualizar na janela principal, com faixa somente quando há versão nova e limpeza dos processos da instalação anterior.
 - Modo estável de transmissão preservado; seletor experimental preparado para uma futura versão.
 - Serviço SYSTEM com agente na sessão física, destinado ao acesso antes do login e a aplicativos elevados.
-- Tema claro/escuro, bandeja, indicador de acesso e logs sem imagens, senhas ou teclas.
+- Tema claro/escuro, bandeja no ADMIN e no PC REMOTO, indicador de acesso e logs sem imagens, senhas ou teclas.
 
 **Estado:** implementação e instalador disponíveis. Compilação e testes locais descritos em [validação](docs/validacao.md). Login/UAC, reinício e operação entre dois PCs ainda exigem validação real. Instalador sem assinatura Authenticode.
 
-**Versão 1.4.0**, com ajuste nítido à janela e tela cheia opcional na sessão (Ctrl+Alt+F11). Instalador e SHA-256 disponíveis no [release](https://github.com/gustavotoigo-max/NexoDesk-New/releases/tag/v1.4.0). [Plano da transmissão experimental](docs/plano-transmissao.md).
+**Versão 1.4.1**, com ajuste nítido à janela e tela cheia opcional na sessão (Ctrl+Alt+F11). Instalador e SHA-256 disponíveis no [release](https://github.com/gustavotoigo-max/NexoDesk-New/releases/tag/v1.4.1). [Plano da transmissão experimental](docs/plano-transmissao.md).
 
 ## Instalar
 
-Baixe o [instalador 1.4.0](https://github.com/gustavotoigo-max/NexoDesk-New/releases/download/v1.4.0/NexoDesk-New-Setup-1.4.0.exe) e execute nos dois computadores. A cópia local fica em **artifacts/NexoDesk-New-Setup-1.4.0.exe**. As versões 1.1.0 e 1.2.1 permanecem nos releases anteriores. O instalador inclui o runtime .NET; não é necessário baixá-lo para executar.
+Baixe o [instalador 1.4.1](https://github.com/gustavotoigo-max/NexoDesk-New/releases/download/v1.4.1/NexoDesk-New-Setup-1.4.1.exe) e execute nos dois computadores. A cópia local fica em **artifacts/NexoDesk-New-Setup-1.4.1.exe**. As versões 1.1.0 e 1.2.1 permanecem nos releases anteriores. O instalador inclui o runtime .NET; não é necessário baixá-lo para executar.
 
 1. No remoto, escolha **PC REMOTO**.
 2. Escolha **Tailscale (internet)** ou **Rede local**, selecione o IP quando necessário e aplique.
@@ -32,6 +32,8 @@ Baixe o [instalador 1.4.0](https://github.com/gustavotoigo-max/NexoDesk-New/rele
 6. Informe a senha na primeira conexão; ela fica protegida na conta Windows do ADMIN.
 
 No PC REMOTO, o **X** recolhe a janela para a bandeja. **Sair e encerrar o serviço**, no ícone perto do relógio, encerra a interface, o supervisor e o agente desta instalação; o Tailscale continua conectado. Ao abrir novamente, o serviço é iniciado. A preferência de início com o Windows é mantida. [Processos e atualização](docs/processos-atualizacao.md).
+
+No ADMIN, o ícone perto do relógio mostra um marcador quando há conexão ativa. A dica informa o remoto ou a quantidade de conexões. Duplo clique abre a janela principal; o menu permite **Encerrar todas as conexões** ou **Sair do NexoDesk New**. Fechar a janela principal do ADMIN encerra o programa.
 
 Os campos de pareamento e senha foram ampliados; o olho revela/oculta cada senha. A interface usa seções com separadores e cantos discretos.
 

@@ -106,6 +106,8 @@ public sealed class SessionViewModel : ObservableObject
     public ICommand ReconnectCommand { get; }
     public ICommand CloseCommand { get; }
 
+    /// <summary>Conexão em streaming, inclusive no modo Ver a tela.</summary>
+    public bool IsActive => !IsEnded && _session.StateMachine.State == SessionState.Streaming;
     /// <summary>Verdadeiro quando a sessão é de controle e está ativa (envia mouse/teclado).</summary>
     public bool CanControl => _session.CanControl && !IsEnded;
 

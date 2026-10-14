@@ -147,6 +147,12 @@ public sealed class AdminViewModel : ObservableObject
         }
     }
 
+    /// <summary>Somente conexões em streaming; janelas de sessões encerradas não contam.</summary>
+    internal string[] ActiveSessionNames => Application.Current.Windows.OfType<SessionWindow>()
+        .Select(window => window.DataContext).OfType<SessionViewModel>()
+        .Where(session => session.IsActive).Select(session => session.Machine.DisplayName).ToArray();
+    public event Action? ActiveSessionsChanged;
+
     public bool HasOpenSessions => Application.Current.Windows.OfType<SessionWindow>().Any();
 
     public void Initialize()
@@ -285,6 +291,7 @@ public sealed class AdminViewModel : ObservableObject
             AddLog(LogLevel.Ok, $"{machine.DisplayName}: acesso aceito · {session.NegotiatedProtocol}.");
             Audit(AuditEventType.SessionStarted, machine, sessionId: session.Accepted.SessionId);
             new SessionWindow(new SessionViewModel(session, machine, this)).Show();
+            ActiveSessionsChanged?.Invoke();
         }
         catch (OperationCanceledException)
         {
@@ -335,6 +342,7 @@ public sealed class AdminViewModel : ObservableObject
         AddLog(LogLevel.Info, $"{machine.DisplayName}: {reason}");
         Audit(AuditEventType.SessionEnded, machine, sessionId: sessionId, reason: reason);
         SetStatus($"Acesso a {machine.DisplayName} encerrado.", "Ready");
+        ActiveSessionsChanged?.Invoke();
     }
 
     internal Task ReconnectAsync(MachineViewModel machine) =>
