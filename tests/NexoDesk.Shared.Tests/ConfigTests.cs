@@ -91,6 +91,9 @@ public class ConfigTests
     {
         AppConfig old = ConfigStore.Parse("{\"remote\":{\"maxFps\":30}}");
         Assert.Equal(TransmissionMode.Stable, old.Remote.TransmissionMode);
+        Assert.True(old.Admin.EnhancedWindowFit);
+        old.Admin.EnhancedWindowFit = false;
+        Assert.False(ConfigStore.Parse(ConfigStore.Serialize(old)).Admin.EnhancedWindowFit);
         AppConfig cfg = Valid();
         cfg.Remote.TransmissionMode = TransmissionMode.Experimental;
         AppConfig restored = ConfigStore.Parse(ConfigStore.Serialize(cfg));

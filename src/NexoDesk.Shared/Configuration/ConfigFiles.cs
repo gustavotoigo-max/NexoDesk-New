@@ -79,6 +79,9 @@ public sealed record AdminSettings
 
     /// <summary>Mostrar o ponteiro do PC REMOTO sobreposto à imagem (ver movimento físico do mouse lá).</summary>
     public bool ShowRemotePointer { get; set; } = true;
+
+    /// <summary>Redução cúbica e nitidez local ao ajustar a tela remota à janela.</summary>
+    public bool EnhancedWindowFit { get; set; } = true;
 }
 
 /// <summary>

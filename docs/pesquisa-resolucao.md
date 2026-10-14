@@ -2,6 +2,8 @@
 
 Pesquisa realizada em 14/10/2026. Referências técnicas verificadas em documentação Microsoft e repositórios dos projetos. Esta entrega inclui tela cheia opcional; não instala drivers nem altera resolução remota.
 
+**Evolução:** a 1.3.0 implementa o primeiro ajuste cúbico/nitidez local. [Implementação, comparação e validação](ajuste-imagem.md). Este relatório registra as conclusões e alternativas da pesquisa inicial.
+
 ## 1. Recomendação para o uso confirmado
 
 O usuário prefere trabalhar em janela e confirmou que alguém também usa o monitor físico do PC REMOTO. Portanto, **preservar a resolução física é requisito**.
@@ -125,7 +127,7 @@ Não definir prazos/limiares de redimensionamento como se fossem resultados de b
 
 **Aceitação:** pixels exibidos 1:1 na área virtual, modo físico preservado e ciclo de sessão previsível. Independência de usuários não é um critério que um simples monitor extra possa satisfazer.
 
-## 7. O que foi entregue nesta versão
+## 7. Entrega inicial da pesquisa (1.2.1)
 
 A 1.2.1 acrescenta tela cheia opcional, por botão no rodapé ou Ctrl+Alt+F11, com saída disponível e restauração da janela. Mantém a escolha 100%, não muda a resolução remota e não torna a janela sempre no topo. F11 sozinho continua disponível para aplicativos remotos.
 

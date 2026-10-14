@@ -12,7 +12,7 @@
 
 O usuário confirmou que alguém usa o monitor físico do PC REMOTO simultaneamente. Preservar sua resolução e área de trabalho. A [pesquisa de resolução](pesquisa-resolucao.md) compara escala, monitor virtual e sessão separada.
 
-Para compartilhar a mesma tela física, comparar primeiro escala cúbica Direct2D e nitidez moderada com o Fant atual, sem prometer igualdade a 100%. Antes de implementar adaptação automática, decidir se a área extra de um monitor virtual atende ao uso pretendido. Ela não é espelho idêntico da tela física nem cria foco/teclado independentes. Prototipar captura de monitor selecionado e pixels 1:1 sem alterar o Estável; só então avaliar driver e ciclo de resolução. A 1.2.1 inclui apenas tela cheia opcional.
+Para compartilhar a mesma tela física, comparar primeiro escala cúbica Direct2D e nitidez moderada com o Fant atual, sem prometer igualdade a 100%. Antes de implementar adaptação automática, decidir se a área extra de um monitor virtual atende ao uso pretendido. Ela não é espelho idêntico da tela física nem cria foco/teclado independentes. Prototipar captura de monitor selecionado e pixels 1:1 sem alterar o Estável; só então avaliar driver e ciclo de resolução. A 1.2.1 acrescentou tela cheia opcional; a 1.3.0 implementa o primeiro ajuste nítido local por Direct2D, com comparação/retorno ao anterior. Consulte [implementação e validação do ajuste](ajuste-imagem.md). Monitor virtual e o novo motor continuam futuros.
 
 ## Proteção da versão funcional
 

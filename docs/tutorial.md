@@ -2,7 +2,7 @@
 
 ## Instalar
 
-1. Execute NexoDesk-New-Setup-1.1.0.exe como administrador nos dois PCs.
+1. Execute NexoDesk-New-Setup-1.3.0.exe como administrador nos dois PCs.
 2. Abra pelo atalho, aceite a elevação e escolha papel/nome.
 3. O serviço NexoDeskRemote é registrado como SYSTEM. A senha solicitada pelo NexoDesk New é própria do acesso remoto; não é a senha da conta Windows.
 
@@ -36,7 +36,10 @@ Trocar a senha corta a sessão existente. Após recusa, a senha salva é limpa e
 ## Exibição da tela
 
 - **100%** preserva um pixel remoto por pixel local; imagens maiores exigem rolagem.
-- Desmarcar **100%** ajusta a imagem à janela, com redução quando necessário.
+- Desmarcar **100%** ajusta a imagem à área útil da janela e ao DPI local.
+- **Nitidez**, na barra da sessão, ativa redução cúbica e nitidez moderada quando a imagem precisa ser reduzida. Desative para comparar com o ajuste anterior; 100% não recebe filtros.
+- **Configurações > Imagem em janela > Melhorar nitidez ao ajustar à janela** salva a preferência para novas sessões. O botão da sessão também salva essa preferência.
+- O rodapé informa **Ajuste nítido** ou **Ajuste original**. Se a GPU não aceitar o recurso, a visualização original continua disponível automaticamente.
 - **Tela cheia**, no rodapé da sessão, usa o monitor atual sem mudar a resolução do PC REMOTO.
 - **Sair da tela cheia** ou **Ctrl+Alt+F11** restaura a janela; esse atalho é tratado localmente. F11 sozinho continua disponível no remoto.
 - Entrar/sair mantém a escolha de 100%. Alt+Tab continua disponível para trocar de aplicativo no ADMIN.
@@ -65,4 +68,4 @@ O aviso de acesso aparece por dez segundos. **Fechar aviso** apenas fecha a faix
 - Na janela principal, **Atualizar** consulta novamente e, havendo uma versão nova verificável, baixa e inicia a instalação. As conexões são encerradas durante a atualização.
 - Em **Configurações > Transmissão de tela**, **Estável — atual, sem perda** preserva o motor existente.
 - **Experimental — em preparação** permanece indisponível até a implementação do novo motor. A transmissão será escolhida no PC REMOTO.
-- O instalador local 1.2.1 permite testar esta entrega. O release público 1.1.0 continua disponível enquanto a nova versão não for publicada.
+- A 1.3.0 inclui o ajuste nítido local, mantendo o motor Estável. As versões 1.1.0 e 1.2.1 continuam nos releases anteriores.

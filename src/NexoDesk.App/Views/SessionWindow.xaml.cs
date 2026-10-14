@@ -33,6 +33,14 @@ public partial class SessionWindow : NxWindow
         _vm = vm;
         DataContext = vm;
         vm.CloseRequested += Close;
+        vm.DesktopUpdated += RemoteImage.ApplyBlocks;
+        RemoteImage.EnhancementFailed += vm.LogImageFallback;
+        Closed += (_, _) =>
+        {
+            vm.CloseRequested -= Close;
+            vm.DesktopUpdated -= RemoteImage.ApplyBlocks;
+            RemoteImage.EnhancementFailed -= vm.LogImageFallback;
+        };
 
         // Controle: captura mouse e teclado sobre a imagem e envia ao PC REMOTO.
         RemoteImage.MouseMove += OnMouseMove;
@@ -51,7 +59,7 @@ public partial class SessionWindow : NxWindow
         SizeChanged += (_, _) => { ApplyScale(); UpdateCursorOverlay(); };
     }
 
-    /// <summary>Coloca o ponteiro remoto sobre a imagem usando a mesma conta de letterbox do controle.</summary>
+    /// <summary>Coloca o ponteiro remoto sobre a imagem usando a mesma área física de imagem do controle.</summary>
     private void UpdateCursorOverlay()
     {
         if (!_vm.ShowCursorOverlay)
@@ -60,56 +68,26 @@ public partial class SessionWindow : NxWindow
             return;
         }
 
-        double containerW = RemoteImage.ActualWidth;
-        double containerH = RemoteImage.ActualHeight;
-        if (containerW <= 0 || containerH <= 0)
+        Rect bounds = RemoteImage.Layout.Bounds;
+        if (bounds.Width <= 0 || bounds.Height <= 0)
         {
             CursorArrow.Visibility = Visibility.Collapsed;
             return;
         }
-
-        double srcW = _vm.RemoteWidth;
-        double srcH = _vm.RemoteHeight;
-        double scale = Math.Min(containerW / srcW, containerH / srcH);
-        double contentW = srcW * scale;
-        double contentH = srcH * scale;
-        double offsetX = (containerW - contentW) / 2;
-        double offsetY = (containerH - contentH) / 2;
-
-        Point point = RemoteImage.TranslatePoint(new Point(offsetX + _vm.CursorX * contentW, offsetY + _vm.CursorY * contentH), CursorLayer);
+        Point point = RemoteImage.TranslatePoint(new Point(bounds.X + _vm.CursorX * bounds.Width,
+            bounds.Y + _vm.CursorY * bounds.Height), CursorLayer);
         Canvas.SetLeft(CursorArrow, point.X);
         Canvas.SetTop(CursorArrow, point.Y);
         CursorArrow.Visibility = Visibility.Visible;
     }
 
     /// <summary>
-    /// Converte a posição do mouse sobre a imagem (ajustada com letterbox pelo Stretch=Uniform)
+    /// Converte a posição do mouse sobre a imagem (área útil alinhada aos pixels físicos)
     /// em coordenadas normalizadas 0..1 da tela remota. Retorna false se estiver fora da imagem.
     /// </summary>
     private bool TryNormalize(MouseEventArgs e, out double nx, out double ny)
     {
-        nx = ny = 0;
-        double containerW = RemoteImage.ActualWidth;
-        double containerH = RemoteImage.ActualHeight;
-        if (containerW <= 0 || containerH <= 0)
-            return false;
-
-        double srcW = _vm.RemoteWidth;
-        double srcH = _vm.RemoteHeight;
-        double scale = Math.Min(containerW / srcW, containerH / srcH);
-        double contentW = srcW * scale;
-        double contentH = srcH * scale;
-        double offsetX = (containerW - contentW) / 2;
-        double offsetY = (containerH - contentH) / 2;
-
-        Point p = e.GetPosition(RemoteImage);
-        double x = (p.X - offsetX) / contentW;
-        double y = (p.Y - offsetY) / contentH;
-        if (x < 0 || x > 1 || y < 0 || y > 1)
-            return false;
-        nx = x;
-        ny = y;
-        return true;
+        return RemoteImage.Layout.TryNormalize(e.GetPosition(RemoteImage), out nx, out ny);
     }
 
     private void OnToggleFullScreen(object sender, RoutedEventArgs e) => ToggleFullScreen();
@@ -195,6 +173,7 @@ public partial class SessionWindow : NxWindow
         base.OnDpiChanged(oldDpi, newDpi);
         if (_vm is null) return;
         if (IsFullScreen) PositionFullScreen();
+        RemoteImage.Refresh();
         ApplyScale();
         UpdateCursorOverlay();
     }
@@ -234,6 +213,7 @@ public partial class SessionWindow : NxWindow
     private void ApplyScale()
     {
         bool actual = ActualScale.IsChecked == true;
+        RemoteImage.ActualSize = actual;
         var dpi = System.Windows.Media.VisualTreeHelper.GetDpi(this);
         RemoteImage.Width = actual ? _vm.RemoteWidth / dpi.DpiScaleX : double.NaN;
         RemoteImage.Height = actual ? _vm.RemoteHeight / dpi.DpiScaleY : double.NaN;

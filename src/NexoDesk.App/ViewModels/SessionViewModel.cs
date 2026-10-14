@@ -203,6 +203,13 @@ public sealed class SessionViewModel : ObservableObject
     }
 
     public event Action? CloseRequested;
+    public event Action<DesktopUpdate, IReadOnlyList<byte[]>>? DesktopUpdated;
+    public bool EnhancedWindowFit
+    {
+        get => _main.EnhancedWindowFit;
+        set { _main.EnhancedWindowFit = value; OnPropertyChanged(); }
+    }
+    public void LogImageFallback(string message) => _main.AddLog(LogLevel.Warn, message);
 
     public ImageSource? Frame
     {
@@ -340,6 +347,7 @@ public sealed class SessionViewModel : ObservableObject
         {
             if (IsEnded) return;
             Frame = _presenter.Apply(update, decoded);
+            DesktopUpdated?.Invoke(update, decoded);
             Interlocked.Add(ref _bytesThisSecond, update.EncodedLength);
             if (update.Final) Interlocked.Increment(ref _framesThisSecond);
         }, DispatcherPriority.Render, ct).Task.ConfigureAwait(false);

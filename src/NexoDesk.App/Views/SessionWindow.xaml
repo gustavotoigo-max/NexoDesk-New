@@ -5,6 +5,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:ui="clr-namespace:NexoDesk.Ui.Controls;assembly=NexoDesk.Ui"
              xmlns:vm="clr-namespace:NexoDesk.App.ViewModels"
+             xmlns:appControls="clr-namespace:NexoDesk.App.Controls"
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance Type=vm:SessionViewModel}"
              Title="{Binding Title}"
@@ -21,6 +22,8 @@
                 <Run Text="  ·  " /><Run Text="{Binding DataRateText, Mode=OneWay}" Foreground="{DynamicResource Nx.OnNavy}" />
             </TextBlock>
             <ToggleButton x:Name="ActualScale" Content="100%" ToolTip="Mostrar pixels em tamanho real; desmarque para ajustar à janela." Click="OnToggleScale" Margin="0,0,8,0" Padding="10,4" />
+            <ToggleButton Content="Nitidez" IsChecked="{Binding EnhancedWindowFit}" ToolTip="Melhorar a imagem reduzida. Desative para comparar com o ajuste anterior; 100% preserva os pixels originais."
+                          Margin="0,0,8,0" Padding="10,4" />
             <Button Style="{DynamicResource Nx.Button.Navy}" Content="Desconectar" Command="{Binding DisconnectCommand}" Margin="0,0,4,0" />
         </StackPanel>
     </ui:NxWindow.TitleBarContent>
@@ -36,7 +39,7 @@
     <ui:NxWindow.FooterRightContent>
         <StackPanel Orientation="Horizontal">
             <TextBlock VerticalAlignment="Center">
-                <Run Text="Modo:" /> <Run Text="{Binding ModeText, Mode=OneWay}" Foreground="{DynamicResource Nx.OnNavy}" />
+                <Run Text="{Binding FitStatus, ElementName=RemoteImage, Mode=OneWay}" /> <Run Text=" · Modo:" /> <Run Text="{Binding ModeText, Mode=OneWay}" Foreground="{DynamicResource Nx.OnNavy}" />
             </TextBlock>
             <Button Style="{DynamicResource Nx.FooterLink}" Content="Tela cheia" Margin="14,0,0,0"
                     Click="OnToggleFullScreen" ToolTip="Tela cheia neste monitor (Ctrl+Alt+F11). O ajuste 100% permanece como está." />
@@ -47,7 +50,8 @@
         <!-- Vídeo remoto: ajustado à área útil, sem distorção -->
         <ScrollViewer x:Name="VideoScroll" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Disabled"
                       HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" ScrollChanged="OnVideoScroll">
-            <Image x:Name="RemoteImage" Source="{Binding Frame}" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality" SnapsToDevicePixels="True" UseLayoutRounding="True" Focusable="True" />
+            <appControls:AdaptiveDesktopImage x:Name="RemoteImage" Source="{Binding Frame}" EnhancedFit="{Binding EnhancedWindowFit}"
+                                             SnapsToDevicePixels="True" UseLayoutRounding="True" Focusable="True" />
         </ScrollViewer>
 
         <!-- Saída sempre acessível quando a moldura normal está oculta. -->

@@ -26,12 +26,19 @@
 
   <ItemGroup>
     <Resource Include="Assets\nexodesk.ico" />
+    <Content Include="Assets\ThirdPartyNotices.txt" Link="ThirdPartyNotices.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\NexoDesk.Shared\NexoDesk.Shared.csproj" />
     <ProjectReference Include="..\NexoDesk.Desktop\NexoDesk.Desktop.csproj" />
     <ProjectReference Include="..\NexoDesk.Ui\NexoDesk.Ui.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Vortice.Direct2D1" Version="3.8.3" />
+    <PackageReference Include="Vortice.Direct3D11" Version="3.8.3" />
+    <PackageReference Include="Vortice.Direct3D9" Version="3.8.3" />
   </ItemGroup>
 
 </Project>

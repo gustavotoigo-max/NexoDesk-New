@@ -58,6 +58,14 @@ foreach ($taskRole in @('app','service')) {
     }
 }
 Write-Host 'Runtime .NET incorporado nas duas publicações.'
+foreach ($taskDependency in @('Vortice.Direct2D1.dll','Vortice.Direct3D11.dll','Vortice.Direct3D9.dll',
+    'Vortice.DirectX.dll','Vortice.DXGI.dll','Vortice.Mathematics.dll','SharpGen.Runtime.dll',
+    'SharpGen.Runtime.COM.dll','ThirdPartyNotices.txt')) {
+    if (-not (Test-Path -LiteralPath (Join-Path $taskRoot "publish/app/$taskDependency"))) {
+        throw "Dependência do ajuste de imagem ausente: $taskDependency"
+    }
+}
+Write-Host 'Dependências e licenças do ajuste de imagem incorporadas.'
 $taskSetup = Join-Path $taskRoot "artifacts\NexoDesk-New-Setup-$taskVersion.exe"
 $taskExpected = (Get-Content -LiteralPath "$taskSetup.sha256").Split(' ')[0]
 $taskActual = (Get-FileHash -LiteralPath $taskSetup -Algorithm SHA256).Hash.ToLowerInvariant()

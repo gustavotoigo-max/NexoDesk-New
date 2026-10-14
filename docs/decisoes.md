@@ -17,7 +17,9 @@
 - Aviso de acesso por dez segundos, com fechamento manual sem encerrar a conexão; estado e encerramento permanecem na janela/bandeja.
 - Consulta de releases ao abrir/a cada quatro horas; botão Atualizar permanente na janela principal, com instalação iniciada pelo usuário.
 - Usuário confirmou uso simultâneo do monitor físico do PC REMOTO: sua resolução deve ser preservada. Monitor virtual está em pesquisa, sem implementação/instalação nesta entrega.
-- Tela cheia opcional na 1.2.1, mantendo a escolha de 100% e restaurando a janela ao sair.
+- Tela cheia opcional na 1.2.1, mantendo a escolha de 100% e restaurando a janela ao sair. Usuário confirmou que funcionou perfeitamente no seu teste.
+- Autorização permanente do usuário: a cada nova versão, enviar o código ao GitHub e publicar o release com instalador e SHA-256 após as verificações necessárias, sem pedir nova confirmação de publicação. Conferir conclusão do workflow e disponibilidade no atualizador.
+- Ajuste nítido local autorizado e implementado na 1.3.0: redução cúbica Direct2D e Sharpen moderado, apresentação GPU compartilhada com WPF, retorno ao ajuste anterior por botão/configuração ou falha de GPU. Não muda a resolução física; 100% não aplica filtros. Aceitação visual nos PCs ainda pendente.
 - Plano da evolução em docs/plano-transmissao.md: instrumentação, envio limitado, DXGI e H.264, mantendo o Estável como padrão.
 - Instalação separada da antiga: novo AppId, Program Files\NexoDesk New e ProgramData\NexoDesk-New.
 - Não há migração silenciosa de certificados, senhas ou pareamentos.

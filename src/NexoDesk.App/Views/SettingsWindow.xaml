@@ -64,6 +64,17 @@
             </StackPanel>
         </Border>
 
+        <Border Style="{DynamicResource Nx.Card}" Margin="0,0,0,14"
+                Visibility="{Binding IsAdmin, Converter={StaticResource BoolToVisibility}}">
+            <StackPanel>
+                <TextBlock Style="{DynamicResource Nx.SectionLabel}" Text="IMAGEM EM JANELA" />
+                <CheckBox Content="Melhorar nitidez ao ajustar à janela" IsChecked="{Binding EnhancedWindowFit}"
+                          Foreground="{DynamicResource Nx.Text}" />
+                <TextBlock Style="{DynamicResource Nx.Hint}" TextWrapping="Wrap"
+                           Text="Ajusta a imagem localmente, preservando a resolução do PC REMOTO. Desmarque para usar o ajuste anterior. O modo 100% mantém os pixels originais. Novas sessões usam esta preferência." />
+            </StackPanel>
+        </Border>
+
         <!-- Aparência -->
         <Border Style="{DynamicResource Nx.Card}" Margin="0,0,0,14">
             <StackPanel>
