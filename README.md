@@ -2,7 +2,7 @@
 
 Acesso remoto privado para até cinco PCs Windows x64. Um aplicativo e um instalador para **ADMIN** e **PC REMOTO**.
 
-- Interface **somente como administrador**, com elevação do Windows.
+- Interface **somente como administrador**, inclusive na primeira abertura pelo instalador.
 - Internet pelo Tailscale, sem abrir portas no roteador.
 - Conexão direta na mesma rede local, sem Tailscale.
 - Pareamento por código temporário, certificados individuais e TLS mútuo.
@@ -11,18 +11,18 @@ Acesso remoto privado para até cinco PCs Windows x64. Um aplicativo e um instal
 - Aviso de acesso por dez segundos, com botão para fechar sem desconectar.
 - Blocos de tela sem perda, fila de imagem limitada e visualização a 100%.
 - Ajuste nítido à janela pela GPU, com botão Nitidez para comparar com o ajuste anterior, sem alterar o monitor remoto.
-- Atualizações consultadas ao abrir/a cada quatro horas e pelo botão Atualizar na janela principal, com encerramento da versão antiga.
+- Atualizações consultadas ao abrir/a cada minuto e pelo botão Atualizar na janela principal, com faixa somente quando há versão nova e limpeza dos processos da instalação anterior.
 - Modo estável de transmissão preservado; seletor experimental preparado para uma futura versão.
 - Serviço SYSTEM com agente na sessão física, destinado ao acesso antes do login e a aplicativos elevados.
 - Tema claro/escuro, bandeja, indicador de acesso e logs sem imagens, senhas ou teclas.
 
 **Estado:** implementação e instalador disponíveis. Compilação e testes locais descritos em [validação](docs/validacao.md). Login/UAC, reinício e operação entre dois PCs ainda exigem validação real. Instalador sem assinatura Authenticode.
 
-**Versão 1.3.1**, com ajuste nítido à janela e tela cheia opcional na sessão (Ctrl+Alt+F11). Instalador e SHA-256 disponíveis no [release](https://github.com/gustavotoigo-max/NexoDesk-New/releases/tag/v1.3.1). [Plano da transmissão experimental](docs/plano-transmissao.md).
+**Versão 1.4.0**, com ajuste nítido à janela e tela cheia opcional na sessão (Ctrl+Alt+F11). Instalador e SHA-256 disponíveis no [release](https://github.com/gustavotoigo-max/NexoDesk-New/releases/tag/v1.4.0). [Plano da transmissão experimental](docs/plano-transmissao.md).
 
 ## Instalar
 
-Baixe o [instalador 1.3.1](https://github.com/gustavotoigo-max/NexoDesk-New/releases/download/v1.3.1/NexoDesk-New-Setup-1.3.1.exe) e execute nos dois computadores. A cópia local fica em **artifacts/NexoDesk-New-Setup-1.3.1.exe**. As versões 1.1.0 e 1.2.1 permanecem nos releases anteriores. O instalador inclui o runtime .NET; não é necessário baixá-lo para executar.
+Baixe o [instalador 1.4.0](https://github.com/gustavotoigo-max/NexoDesk-New/releases/download/v1.4.0/NexoDesk-New-Setup-1.4.0.exe) e execute nos dois computadores. A cópia local fica em **artifacts/NexoDesk-New-Setup-1.4.0.exe**. As versões 1.1.0 e 1.2.1 permanecem nos releases anteriores. O instalador inclui o runtime .NET; não é necessário baixá-lo para executar.
 
 1. No remoto, escolha **PC REMOTO**.
 2. Escolha **Tailscale (internet)** ou **Rede local**, selecione o IP quando necessário e aplique.
@@ -30,6 +30,10 @@ Baixe o [instalador 1.3.1](https://github.com/gustavotoigo-max/NexoDesk-New/rele
 4. Gere o código temporário e passe ao responsável pelo ADMIN.
 5. No ADMIN, adicione o remoto colando o código e conecte.
 6. Informe a senha na primeira conexão; ela fica protegida na conta Windows do ADMIN.
+
+No PC REMOTO, o **X** recolhe a janela para a bandeja. **Sair e encerrar o serviço**, no ícone perto do relógio, encerra a interface, o supervisor e o agente desta instalação; o Tailscale continua conectado. Ao abrir novamente, o serviço é iniciado. A preferência de início com o Windows é mantida. [Processos e atualização](docs/processos-atualizacao.md).
+
+Os campos de pareamento e senha foram ampliados; o olho revela/oculta cada senha. A interface usa seções com separadores e cantos discretos.
 
 [Tutorial](docs/tutorial.md) · [Diagnóstico](docs/troubleshooting.md) · [Desempenho](docs/desempenho.md) · [Publicação](docs/publicacao.md)
 

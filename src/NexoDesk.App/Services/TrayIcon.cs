@@ -24,7 +24,7 @@ public sealed class TrayIcon : IDisposable
         _endItem = new WinForms.ToolStripMenuItem("Encerrar acesso remoto", null, (_, _) => endSession()) { Enabled = false };
         menu.Items.Add(_endItem);
         menu.Items.Add(new WinForms.ToolStripSeparator());
-        menu.Items.Add("Sair", null, (_, _) => exit());
+        menu.Items.Add("Sair e encerrar o serviço", null, (_, _) => exit());
 
         _icon = new WinForms.NotifyIcon
         {
@@ -61,7 +61,10 @@ public sealed class TrayIcon : IDisposable
             return;
         _disposed = true;
         _icon.Visible = false;
+        var menu = _icon.ContextMenuStrip;
+        _icon.ContextMenuStrip = null;
         _icon.Dispose();
+        menu?.Dispose();
         DestroyIcon(_idleIcon.Handle);
         DestroyIcon(_activeIcon.Handle);
         _idleIcon.Dispose();

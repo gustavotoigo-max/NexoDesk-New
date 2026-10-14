@@ -81,5 +81,7 @@ public class UpdateViewModelTests
         vm.Dispose();
         await check;
         Assert.False(vm.UpdateCommand.CanExecute(null));
+        Assert.False(vm.CheckCommand.CanExecute(null));
+        Assert.False(vm.InstallCommand.CanExecute(null));
     }
 }

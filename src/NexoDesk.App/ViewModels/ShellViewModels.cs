@@ -145,10 +145,10 @@ public sealed class UpdateViewModel : ObservableObject, IDisposable
         Func<UpdateInfo, IProgress<double>?, CancellationToken, Task<bool>>? downloadAndRun = null)
     {
         _requestExit = requestExit;
-        _checkForUpdates = checkForUpdates ?? (ct => UpdateService.CheckAsync(ct));
+        _checkForUpdates = checkForUpdates ?? (ct => UpdateService.PollAsync(ct));
         _downloadAndRun = downloadAndRun ?? UpdateService.DownloadAndRunAsync;
-        CheckCommand = new AsyncRelayCommand(CheckAsync, () => !_busy && !_checking);
-        InstallCommand = new AsyncRelayCommand(InstallAsync, () => Available && !_busy && !_checking);
+        CheckCommand = new AsyncRelayCommand(CheckAsync, () => !_busy && !_checking && !_stopChecks.IsCancellationRequested);
+        InstallCommand = new AsyncRelayCommand(InstallAsync, () => Available && !_busy && !_checking && !_stopChecks.IsCancellationRequested);
         UpdateCommand = new AsyncRelayCommand(UpdateAsync, () => !_busy && !_checking && !_stopChecks.IsCancellationRequested);
     }
 
@@ -209,13 +209,20 @@ public sealed class UpdateViewModel : ObservableObject, IDisposable
         if (Available && !_stopChecks.IsCancellationRequested) await InstallAsync();
     }
 
-    public void StartPeriodicChecks() => _ = MonitorAsync();
+    private bool _monitorStarted;
+    public static TimeSpan CheckInterval => TimeSpan.FromMinutes(1);
+    public void StartPeriodicChecks()
+    {
+        if (_monitorStarted || _stopChecks.IsCancellationRequested) return;
+        _monitorStarted = true;
+        _ = MonitorAsync();
+    }
     private async Task MonitorAsync()
     {
         try
         {
             await CheckAsync();
-            using var timer = new PeriodicTimer(TimeSpan.FromHours(4));
+            using var timer = new PeriodicTimer(CheckInterval);
             while (await timer.WaitForNextTickAsync(_stopChecks.Token)) await CheckAsync();
         }
         catch (OperationCanceledException) when (_stopChecks.IsCancellationRequested) { }

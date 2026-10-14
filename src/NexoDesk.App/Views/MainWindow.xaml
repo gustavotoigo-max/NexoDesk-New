@@ -35,6 +35,7 @@
 
     <ui:NxWindow.FooterRightContent>
         <StackPanel Orientation="Horizontal">
+            <Button Style="{DynamicResource Nx.FooterLink}" Content="{Binding Update.ActionText}" Command="{Binding Update.CheckCommand}" ToolTip="{Binding Update.Status}" Margin="0,0,16,0" />
             <Button Style="{DynamicResource Nx.FooterLink}" Content="Configurações" Click="OnOpenSettings" />
             <TextBlock Text="·" Margin="10,0" Foreground="{DynamicResource Nx.OnNavyMuted}" />
             <Button Style="{DynamicResource Nx.FooterLink}" Content="Pasta de registros" Command="{Binding OpenLogsCommand}" />
@@ -42,9 +43,10 @@
     </ui:NxWindow.FooterRightContent>
 
     <DockPanel>
-        <!-- Consulta automática e botão permanente de atualização por release. -->
+        <!-- A faixa só ocupa espaço quando há uma versão nova; consulta manual fica no rodapé. -->
         <Border DockPanel.Dock="Top" Background="{DynamicResource Nx.InfoSoft}" BorderBrush="{DynamicResource Nx.InfoBorder}"
-                BorderThickness="0,0,0,1" Padding="28,10">
+                BorderThickness="0,0,0,1" Padding="28,10"
+                Visibility="{Binding Update.Available, Converter={StaticResource BoolToVisibility}}">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />

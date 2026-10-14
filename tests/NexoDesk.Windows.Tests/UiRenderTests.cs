@@ -5,6 +5,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using NexoDesk.App.ViewModels;
+using NexoDesk.App.Controls;
 using NexoDesk.App.Views;
 using NexoDesk.Shared.Configuration;
 using NexoDesk.Ui;
@@ -72,6 +73,57 @@ public class UiRenderTests
                 using (var settingsFile = File.Create(Path.Combine(output, "settings-dark.png"))) settingsEncoder.Save(settingsFile);
                 settings.Close();
 
+                stage = "diálogos e atualização";
+                FrameworkElement RenderContent(Window window, object? data, string fileName, double width, double height)
+                {
+                    var content = (FrameworkElement)window.Content;
+                    window.Content = null;
+                    content.DataContext = data;
+                    var root = new Border { Child = content, Background = (Brush)app.FindResource("Nx.Bg") };
+                    System.Windows.Documents.TextElement.SetForeground(root, (Brush)app.FindResource("Nx.Text"));
+                    root.Measure(new Size(width, height)); root.Arrange(new Rect(0, 0, width, height)); root.UpdateLayout();
+                    var rendered = new RenderTargetBitmap((int)width, (int)height, 96, 96, PixelFormats.Pbgra32);
+                    rendered.Render(root);
+                    var png = new PngBitmapEncoder(); png.Frames.Add(BitmapFrame.Create(rendered));
+                    using var target = File.Create(Path.Combine(output, fileName)); png.Save(target);
+                    return content;
+                }
+                foreach (NxThemeMode theme in new[] { NxThemeMode.Light, NxThemeMode.Dark })
+                {
+                    app.Resources.MergedDictionaries[1] = new ResourceDictionary
+                    { Source = new Uri("pack://application:,,,/NexoDesk.Ui;component/Themes/" + theme + ".xaml") };
+                    string suffix = theme.ToString().ToLowerInvariant();
+                    var pair = new AddComputerWindow();
+                    RenderContent(pair, new PreviewPairing(), $"pairing-{suffix}.png", 660, 550);
+                    Assert.True(pair.AddressBox.ActualWidth >= 580);
+                    Assert.True(pair.AddressBox.ActualHeight >= 92);
+                    pair.Close();
+                    var password = new PasswordWindow("Definir senha de acesso", true);
+                    password.Entry.Masked.Password = "Senha de teste com espaços!";
+                    password.Entry.SetRevealed(true);
+                    Assert.Equal("Senha de teste com espaços!", password.Entry.Password);
+                    Assert.Empty(password.Entry.Masked.Password);
+                    password.Entry.Revealed.Text += "123";
+                    password.Entry.SetRevealed(false);
+                    Assert.Equal("Senha de teste com espaços!123", password.Entry.Password);
+                    Assert.Empty(password.Entry.Revealed.Text);
+                    RenderContent(password, null, $"password-{suffix}.png", 560, 490);
+                    Assert.True(password.Entry.Masked.ActualHeight >= 46);
+                    password.Entry.Clear(); Assert.Empty(password.Entry.Password);
+                    password.Close();
+                    var update = new PreviewUpdate();
+                    var shell = new PreviewShell(update);
+                    var main = new MainWindow();
+                    var dock = (DockPanel)RenderContent(main, shell, $"main-current-{suffix}.png", 1080, 300);
+                    var banner = (Border)dock.Children[0];
+                    Assert.Equal(Visibility.Collapsed, banner.Visibility);
+                    update.Available = true;
+                    dock.DataContext = null; dock.DataContext = shell; dock.UpdateLayout();
+                    Assert.Equal(Visibility.Visible, banner.Visibility);
+                    Assert.True(banner.ActualHeight > 0);
+                    main.Close();
+                }
+
                 stage = "moldura da tela cheia";
                 var chromeResources = new ResourceDictionary
                 {
@@ -126,14 +178,30 @@ public class UiRenderTests
         public string Fingerprint => "AAAA BBBB CCCC…";
         public string FullFingerprint => new string('A', 64);
         public string ValidityText => "válida até 14/10/2027";
-        public string Version => "1.2.0";
+        public string Version => "1.4.0";
         public PreviewUpdate Update { get; } = new();
     }
 
     public sealed class PreviewUpdate
     {
-        public string Status => "Versão 1.2.0 atualizada.";
-        public bool Available => false;
+        public string Status => "Versão 1.4.0 atualizada.";
+        public bool Available { get; set; }
+        public string Heading => "Atualização disponível: versão 1.4.0";
+        public string ActionText => "Atualizar";
+    }
+
+    public sealed class PreviewShell(PreviewUpdate update)
+    {
+        public PreviewUpdate Update { get; } = update;
+        public Border Content { get; } = new() { Child = new TextBlock { Text = "PCs REMOTOS", Margin = new Thickness(28) } };
+    }
+    public sealed class PreviewPairing
+    {
+        public string AccessCode { get; set; } = "NXD1-MTAwLjEwMS4xMDIuMTAzfDQ3MTE1fEFCQ0RFRkdISUpLTA";
+        public string Name { get; set; } = "Computador da recepção";
+        public string CancelText => "Cancelar";
+        public string StatusText => "Pronto para parear.";
+        public bool IsBusy => false;
     }
 
     public sealed class PreviewRemote

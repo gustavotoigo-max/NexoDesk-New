@@ -51,19 +51,21 @@ Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall delete rule name=
 Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall delete rule name=""NexoDesk New (Rede local)"""; Flags: runhidden waituntilterminated
 Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall add rule name=""NexoDesk New (Tailscale)"" dir=in action=allow program=""{app}\service\NexoDesk.Service.exe"" protocol=TCP localport=47115 remoteip=100.64.0.0/10,fd7a:115c:a1e0::/48 profile=any"; Flags: runhidden waituntilterminated; StatusMsg: "Configurando a rede Tailscale..."
 Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall add rule name=""NexoDesk New (Rede local)"" dir=in action=allow program=""{app}\service\NexoDesk.Service.exe"" protocol=TCP localport=47115 remoteip=LocalSubnet profile=private"; Flags: runhidden waituntilterminated; StatusMsg: "Configurando a rede local..."
-Filename: "{app}\{#AppExe}"; Description: "Abrir o NexoDesk New agora"; Flags: nowait postinstall skipifsilent; Check: NotUpdaterRun
+Filename: "{app}\{#AppExe}"; Description: "Abrir o NexoDesk New agora"; Flags: nowait postinstall skipifsilent runascurrentuser; Check: NotUpdaterRun
 
 Filename: "{app}\{#AppExe}"; Flags: nowait runascurrentuser; Check: IsUpdaterRun
 
 [UninstallRun]
 Filename: "{sys}\sc.exe"; Parameters: "stop {#ServiceName}"; Flags: runhidden waituntilterminated; RunOnceId: "PararServico"
-Filename: "{sys}\taskkill.exe"; Parameters: "/IM NexoDesk.Service.exe /F"; Flags: runhidden waituntilterminated; RunOnceId: "PararAgentes"
 Filename: "{sys}\sc.exe"; Parameters: "delete {#ServiceName}"; Flags: runhidden waituntilterminated; RunOnceId: "RemoverServico"
 Filename: "{sys}\schtasks.exe"; Parameters: "/Delete /TN ""NexoDesk-New.Interface"" /F"; Flags: runhidden waituntilterminated; RunOnceId: "RemoverTarefa"
 Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall delete rule name=""NexoDesk New (Tailscale)"""; Flags: runhidden waituntilterminated; RunOnceId: "RemoverFirewallTailscale"
 Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall delete rule name=""NexoDesk New (Rede local)"""; Flags: runhidden waituntilterminated; RunOnceId: "RemoverFirewallLocal"
 
 [Code]
+function GetLastError(): LongWord;
+  external 'GetLastError@kernel32.dll stdcall';
+
 function OpenProcess(Access: LongWord; InheritHandle: LongWord; ProcessId: LongWord): THandle;
   external 'OpenProcess@kernel32.dll stdcall';
 function GetExitCodeProcess(Handle: THandle; var Code: LongWord): Integer;
@@ -87,7 +89,13 @@ begin
   Result := not IsUpdaterRun();
 end;
 
-function StopPreviousInterfaceByPid(ProcessId: LongWord): String;
+function IsInstallationExecutable(Name: String): Boolean;
+begin
+  Result := (CompareText(Name, ExpandConstant('{app}\{#AppExe}')) = 0) or
+    (CompareText(Name, ExpandConstant('{app}\service\NexoDesk.Service.exe')) = 0);
+end;
+
+function StopPreviousProcessByPid(ProcessId: LongWord): String;
 var
   Code, Size: LongWord;
   Handle: THandle;
@@ -97,7 +105,11 @@ begin
 
   if ProcessId = 0 then exit;
   Handle := OpenProcess($00101001, 0, ProcessId);
-  if Handle = 0 then exit;
+  if Handle = 0 then
+  begin
+    if GetLastError() <> 87 then Result := 'Não foi possível encerrar um processo da versão anterior.';
+    exit;
+  end;
   try
     if (GetExitCodeProcess(Handle, Code) <> 0) and (Code <> 259) then exit;
     SetLength(Name, 32768);
@@ -108,7 +120,7 @@ begin
       exit;
     end;
     SetLength(Name, Size);
-    if CompareText(Name, ExpandConstant('{app}\{#AppExe}')) <> 0 then
+    if not IsInstallationExecutable(Name) then
     begin
       Result := 'Atualize pela interface instalada em Program Files\NexoDesk New.';
       exit;
@@ -132,7 +144,7 @@ end;
 function EnumProcesses(var FirstId: LongWord; BufferSize: LongWord; var Needed: LongWord): Integer;
   external 'EnumProcesses@psapi.dll stdcall';
 
-function StopPreviousInterface(): String;
+function StopPreviousProcesses(): String;
 var
   Ids: array of LongWord;
   Needed, I, Size, ProcessId: LongWord;
@@ -143,7 +155,7 @@ begin
   ProcessId := StrToIntDef(ExpandConstant('{param:UPDATEPID|0}'), 0);
   if ProcessId > 0 then
   begin
-    Result := StopPreviousInterfaceByPid(ProcessId);
+    Result := StopPreviousProcessByPid(ProcessId);
     if Result <> '' then exit;
   end;
   { Também atende a atualização iniciada pela versão 1.0, que ainda não envia UPDATEPID. }
@@ -165,9 +177,9 @@ begin
         if QueryFullProcessImageName(Handle, 0, Name, Size) <> 0 then
         begin
           SetLength(Name, Size);
-          if CompareText(Name, ExpandConstant('{app}\{#AppExe}')) = 0 then
+          if IsInstallationExecutable(Name) then
           begin
-            Result := StopPreviousInterfaceByPid(Ids[I]);
+            Result := StopPreviousProcessByPid(Ids[I]);
             if Result <> '' then exit;
           end;
         end;
@@ -186,14 +198,31 @@ begin
   Result := ExitCode;
 end;
 
+function StopInstalledService(): String;
+var
+  Code: Integer;
+begin
+  Result := '';
+  Code := RunSystem('sc.exe', 'failure {#ServiceName} reset= 86400 actions= ""');
+  if (Code <> 0) and (Code <> 1060) then
+  begin
+    Result := 'Não foi possível suspender a recuperação do serviço antigo.';
+    exit;
+  end;
+  Code := RunSystem('sc.exe', 'stop {#ServiceName}');
+  if (Code <> 0) and (Code <> 1060) and (Code <> 1062) and (Code <> 1061) then
+    Result := 'Não foi possível parar o serviço antigo.';
+end;
+
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 begin
-  Result := StopPreviousInterface();
+  { Desativa recuperação antes da parada: o SCM não pode recriar a versão antiga. }
+  Result := StopInstalledService();
   if Result <> '' then exit;
-  RunSystem('sc.exe', 'stop {#ServiceName}');
-  Sleep(1500);
-  RunSystem('taskkill.exe', '/IM NexoDesk.Service.exe /F');
-  Result := '';
+  Result := StopPreviousProcesses();
+  if Result = '' then Result := StopPreviousProcesses();
+  { Cada PID é conferido pelo caminho completo, inclusive o agente e o supervisor.
+    Qualquer falha impede substituir arquivos ainda em uso; Tailscale não é afetado. }
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
@@ -215,5 +244,17 @@ begin
     ResultCode := RunSystem('sc.exe', 'start {#ServiceName}');
     if (ResultCode <> 0) and (ResultCode <> 1056) then
       RaiseException('O serviço NexoDesk New não iniciou (' + IntToStr(ResultCode) + ').');
+  end;
+end;
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+var
+  Error: String;
+begin
+  if CurUninstallStep = usUninstall then
+  begin
+    Error := StopInstalledService();
+    if Error = '' then Error := StopPreviousProcesses();
+    if Error = '' then Error := StopPreviousProcesses();
+    if Error <> '' then RaiseException(Error);
   end;
 end;

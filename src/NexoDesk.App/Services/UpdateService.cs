@@ -19,6 +19,11 @@ public sealed class UpdateService
 {
     private const string Repository = "gustavotoigo-max/NexoDesk-New";
     private static readonly HttpClient Http = CreateClient();
+    private static readonly HttpClient Probe = new(new HttpClientHandler { AllowAutoRedirect = false })
+    { Timeout = TimeSpan.FromSeconds(15) };
+    private static readonly ReleasePoller Poller = new(Probe, Current, ct => CheckAsync(ct));
+
+    public static Task<UpdateCheckResult> PollAsync(CancellationToken ct = default) => Poller.CheckAsync(ct);
     private static HttpClient CreateClient()
     {
         var client = new HttpClient { Timeout = TimeSpan.FromMinutes(5) };

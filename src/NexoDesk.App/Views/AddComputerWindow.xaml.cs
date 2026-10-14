@@ -6,11 +6,12 @@ namespace NexoDesk.App.Views;
 
 public partial class AddComputerWindow : NxWindow
 {
-    private readonly AddComputerViewModel _vm;
+    private readonly AddComputerViewModel? _vm;
 
-    public AddComputerWindow(AddComputerViewModel vm)
+    internal AddComputerWindow() => InitializeComponent();
+
+    public AddComputerWindow(AddComputerViewModel vm) : this()
     {
-        InitializeComponent();
         _vm = vm;
         DataContext = vm;
         vm.CloseRequested += Close;
@@ -21,7 +22,7 @@ public partial class AddComputerWindow : NxWindow
     protected override void OnClosing(CancelEventArgs e)
     {
         base.OnClosing(e);
-        if (_vm.IsBusy)
+        if (_vm?.IsBusy == true)
             _vm.CancelCommand.Execute(null);
     }
 }

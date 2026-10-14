@@ -7,11 +7,12 @@ namespace NexoDesk.App.Views;
 /// <summary>Janela principal: a mesma moldura nos dois modos; o conteúdo é a tela ADMIN ou a tela PC REMOTO.</summary>
 public partial class MainWindow : NxWindow
 {
-    private readonly ShellViewModel _shell;
+    private readonly ShellViewModel? _shell;
 
-    public MainWindow(ShellViewModel shell)
+    internal MainWindow() => InitializeComponent();
+
+    public MainWindow(ShellViewModel shell) : this()
     {
-        InitializeComponent();
         _shell = shell;
         DataContext = shell;
         Closed += (_, _) => _shell.Update.Dispose();
@@ -19,6 +20,6 @@ public partial class MainWindow : NxWindow
 
     private void OnOpenSettings(object sender, RoutedEventArgs e)
     {
-        new SettingsWindow(_shell.Settings) { Owner = this }.ShowDialog();
+        new SettingsWindow(_shell!.Settings) { Owner = this }.ShowDialog();
     }
 }

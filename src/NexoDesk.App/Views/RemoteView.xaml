@@ -23,7 +23,7 @@
                                           Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1">
                                 <ToggleButton.Template>
                                     <ControlTemplate TargetType="ToggleButton">
-                                        <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" CornerRadius="8" />
+                                        <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" CornerRadius="4" />
                                     </ControlTemplate>
                                 </ToggleButton.Template>
                             </ToggleButton>
@@ -31,7 +31,7 @@
                                               Content="{TemplateBinding SelectionBoxItem}" ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}" ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}" ContentStringFormat="{TemplateBinding SelectionBoxItemStringFormat}" />
                             <TextBlock Text="⌄" Margin="0,0,10,0" HorizontalAlignment="Right" VerticalAlignment="Center" IsHitTestVisible="False" />
                             <Popup IsOpen="{TemplateBinding IsDropDownOpen}" Placement="Bottom" AllowsTransparency="True" Focusable="False">
-                                <Border Background="{DynamicResource Nx.Surface}" BorderBrush="{DynamicResource Nx.Border}" BorderThickness="1" CornerRadius="8"
+                                <Border Background="{DynamicResource Nx.Surface}" BorderBrush="{DynamicResource Nx.Border}" BorderThickness="1" CornerRadius="4"
                                         MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}" Padding="6">
                                     <ScrollViewer MaxHeight="240"><ItemsPresenter /></ScrollViewer>
                                 </Border>
@@ -132,11 +132,11 @@
                 </Grid.ColumnDefinitions>
 
                 <!-- Endereço -->
-                <Border Style="{DynamicResource Nx.Card}">
+                <Border Style="{DynamicResource Nx.Section}" Padding="0,18,18,0">
                     <StackPanel>
                         <TextBlock Style="{DynamicResource Nx.SectionLabel}" Text="ENDEREÇO DESTE PC REMOTO" />
-                        <TextBlock Style="{DynamicResource Nx.Muted}" Text="O ADMIN digita este endereço ao adicionar este computador." />
-                        <Border Background="{DynamicResource Nx.SurfaceAlt}" BorderBrush="{DynamicResource Nx.Border}" BorderThickness="1" CornerRadius="10" Padding="14,12" Margin="0,12,0,10">
+                        <TextBlock Style="{DynamicResource Nx.Muted}" Text="O código de acesso já inclui este endereço." />
+                        <Border Background="{DynamicResource Nx.SurfaceAlt}" BorderBrush="{DynamicResource Nx.Border}" BorderThickness="1" CornerRadius="6" Padding="14,12" Margin="0,12,0,10">
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
@@ -165,7 +165,7 @@
                 </Border>
 
                 <!-- Pareamento -->
-                <Border Grid.Column="2" Style="{DynamicResource Nx.Card}">
+                <Border Grid.Column="2" Style="{DynamicResource Nx.Section}">
                     <Grid>
                         <!-- Sem código -->
                         <StackPanel>
@@ -198,7 +198,7 @@
                                 </Style>
                             </StackPanel.Style>
                             <TextBlock Style="{DynamicResource Nx.SectionLabel}" Text="CÓDIGO DE ACESSO" />
-                            <Border Background="{DynamicResource Nx.BlueSoft}" BorderBrush="{DynamicResource Nx.BlueSelection}" BorderThickness="1" CornerRadius="10" Padding="12,14">
+                            <Border Background="{DynamicResource Nx.BlueSoft}" BorderBrush="{DynamicResource Nx.BlueSelection}" BorderThickness="1" CornerRadius="6" Padding="12,14">
                                 <StackPanel>
                                     <TextBox Text="{Binding AccessCode, Mode=OneWay}" IsReadOnly="True" BorderThickness="0" Background="Transparent"
                                              Foreground="{DynamicResource Nx.Text}" FontFamily="{DynamicResource Nx.Mono}" FontSize="13" TextWrapping="Wrap"
@@ -217,10 +217,10 @@
             </Grid>
 
             <!-- ADMINs pareados -->
-            <Border Style="{DynamicResource Nx.Card}" Margin="0,0,0,16">
+            <Border Style="{DynamicResource Nx.Section}" Margin="0,0,0,16">
                 <StackPanel>
                     <TextBlock Style="{DynamicResource Nx.SectionLabel}" Text="ADMINS QUE PODEM ACESSAR ESTE COMPUTADOR" />
-                    <Border CornerRadius="10" BorderBrush="{DynamicResource Nx.Border}" BorderThickness="1">
+                    <Border CornerRadius="6" BorderBrush="{DynamicResource Nx.Border}" BorderThickness="1">
                         <Border.Style>
                             <Style TargetType="Border">
                                 <Style.Triggers>
@@ -261,7 +261,7 @@
             </Border>
 
             <!-- Conectividade e senha -->
-            <Border Style="{DynamicResource Nx.Card}" Margin="0,0,0,16">
+            <Border Style="{DynamicResource Nx.Section}" Margin="0,0,0,16">
                 <StackPanel>
                     <TextBlock Style="{DynamicResource Nx.SectionLabel}" Text="CONEXÃO E SENHA DE ACESSO" />
                     <TextBlock Style="{DynamicResource Nx.Muted}" Text="Use Tailscale pela internet ou Rede local para conectar sem Tailscale no mesmo local." />
@@ -278,7 +278,7 @@
                 </StackPanel>
             </Border>
             <!-- Opções -->
-            <Border Style="{DynamicResource Nx.Card}" Margin="0,0,0,16">
+            <Border Style="{DynamicResource Nx.Section}" Margin="0,0,0,16">
                 <StackPanel>
                     <TextBlock Style="{DynamicResource Nx.SectionLabel}" Text="OPÇÕES" />
                     <CheckBox Style="{DynamicResource Nx.Switch}" IsChecked="{Binding StartWithWindows}" Content="Abrir o NexoDesk New junto com o Windows (recomendado)" />
@@ -290,7 +290,7 @@
             </Border>
 
             <!-- Registro -->
-            <Border Style="{DynamicResource Nx.Card}">
+            <Border Style="{DynamicResource Nx.Section}">
                 <StackPanel>
                     <Grid Margin="0,0,0,8">
                         <TextBlock Style="{DynamicResource Nx.SectionLabel}" Text="REGISTRO" Margin="0" VerticalAlignment="Center" />

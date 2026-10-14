@@ -1,57 +1,71 @@
 using System.Windows;
 using System.Windows.Controls;
+using NexoDesk.App.Controls;
 using NexoDesk.Ui.Controls;
 
 namespace NexoDesk.App.Views;
 
-/// <summary>Entrada de senha mascarada; não participa de bindings, logs ou configurações em texto.</summary>
+/// <summary>Entrada de senha local ao diálogo, sem bindings, logs ou persistência em texto.</summary>
 public sealed class PasswordWindow : NxWindow
 {
-    private readonly PasswordBox _password = new() { MinWidth = 300, Margin = new Thickness(0, 12, 0, 8) };
-    private readonly PasswordBox? _confirm;
-    private readonly TextBlock _error = new() { TextWrapping = TextWrapping.Wrap };
+    internal readonly PasswordEntry Entry = new();
+    internal readonly PasswordEntry? Confirmation;
+    private readonly TextBlock _error = new() { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 12, 0, 0) };
     public string? Password { get; private set; }
 
-    private PasswordWindow(string title, bool creating)
+    internal PasswordWindow(string title, bool creating)
     {
-        Title = title; Width = 480; SizeToContent = SizeToContent.Height; ResizeMode = ResizeMode.NoResize;
+        Title = title; Width = 560; SizeToContent = SizeToContent.Height; ResizeMode = ResizeMode.NoResize;
+        CanMinimize = false; CanMaximize = false; ShowFooter = false; ShowInTaskbar = false;
+        MaxHeight = SystemParameters.WorkArea.Height;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
-        var panel = new StackPanel { Margin = new Thickness(24) };
-        panel.Children.Add(new TextBlock { Text = title, FontSize = 20, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap });
-        panel.Children.Add(new TextBlock { Text = creating ? "Use de 12 a 128 caracteres. Esta senha autoriza os ADMINs pareados, inclusive com a tela bloqueada."
-            : "Informe a senha configurada no PC REMOTO. Ela será salva com a proteção do Windows nesta conta.", TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 8, 0, 0) });
-        _password.SetResourceReference(Control.ForegroundProperty, "Nx.Text");
-        _password.SetResourceReference(Control.BackgroundProperty, "Nx.SurfaceAlt");
-        _password.SetResourceReference(Control.BorderBrushProperty, "Nx.Border");
-        panel.Children.Add(_password);
+        var panel = new StackPanel { Margin = new Thickness(28, 24, 28, 24) };
+        var heading = new TextBlock { Text = title, TextWrapping = TextWrapping.Wrap };
+        heading.SetResourceReference(StyleProperty, "Nx.PageTitle"); panel.Children.Add(heading);
+        var description = new TextBlock { Text = creating
+            ? "Use de 12 a 128 caracteres. A senha autoriza os ADMINs pareados, inclusive com a tela bloqueada."
+            : "Informe a senha do PC REMOTO. Ela será salva com a proteção do Windows nesta conta.", Margin = new Thickness(0, 8, 0, 24) };
+        description.SetResourceReference(StyleProperty, "Nx.Body"); panel.Children.Add(description);
+        AddLabel(panel, "Senha"); panel.Children.Add(Entry);
         if (creating)
         {
-            panel.Children.Add(new TextBlock { Text = "Confirme a senha:" });
-            _confirm = new PasswordBox { Margin = new Thickness(0, 8, 0, 8) };
-            _confirm.SetResourceReference(Control.ForegroundProperty, "Nx.Text");
-            _confirm.SetResourceReference(Control.BackgroundProperty, "Nx.SurfaceAlt");
-            _confirm.SetResourceReference(Control.BorderBrushProperty, "Nx.Border");
-            panel.Children.Add(_confirm);
+            Confirmation = new PasswordEntry { Margin = new Thickness(0) };
+            AddLabel(panel, "Confirmar senha", 20); panel.Children.Add(Confirmation);
         }
+        _error.SetResourceReference(System.Windows.Documents.TextElement.ForegroundProperty, "Nx.Danger");
         panel.Children.Add(_error);
-        var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 16, 0, 0) };
-        var cancel = new Button { Content = "Cancelar", IsCancel = true, Padding = new Thickness(14, 7, 14, 7), Margin = new Thickness(0, 0, 8, 0) };
-        var save = new Button { Content = creating ? "Definir senha" : "Conectar", IsDefault = true, Padding = new Thickness(14, 7, 14, 7) };
+        var footer = new Border { Margin = new Thickness(0, 12, 0, 0) };
+        footer.SetResourceReference(StyleProperty, "Nx.Section");
+        var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
+        var cancel = new Button { Content = "Cancelar", IsCancel = true, Margin = new Thickness(0, 0, 10, 0) };
+        cancel.SetResourceReference(StyleProperty, "Nx.Button");
+        var save = new Button { Content = creating ? "Definir senha" : "Conectar", IsDefault = true };
+        save.SetResourceReference(StyleProperty, "Nx.Button.Primary");
         save.Click += (_, _) =>
         {
-            string value = _password.Password;
+            string value = Entry.Password;
             if (value.Length is < 12 or > 128 || value.All(char.IsWhiteSpace)) { _error.Text = "Use de 12 a 128 caracteres."; return; }
-            if (_confirm is not null && value != _confirm.Password) { _error.Text = "As senhas não coincidem."; return; }
-            Password = value;
-            DialogResult = true;
+            if (Confirmation is not null && value != Confirmation.Password) { _error.Text = "As senhas não coincidem."; return; }
+            Password = value; DialogResult = true;
         };
-        buttons.Children.Add(cancel); buttons.Children.Add(save); panel.Children.Add(buttons); Content = panel;
-        Loaded += (_, _) => _password.Focus();
+        buttons.Children.Add(cancel); buttons.Children.Add(save); footer.Child = buttons; panel.Children.Add(footer);
+        Content = new ScrollViewer { Content = panel, VerticalScrollBarVisibility = ScrollBarVisibility.Auto, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled };
+        Loaded += (_, _) => Entry.FocusInput();
+        Closed += (_, _) => { Entry.Clear(); Confirmation?.Clear(); };
+    }
+
+    private static void AddLabel(Panel panel, string text, double top = 0)
+    {
+        var label = new TextBlock { Text = text, Margin = new Thickness(0, top, 0, 8) };
+        label.SetResourceReference(StyleProperty, "Nx.FieldLabel"); panel.Children.Add(label);
     }
 
     public static string? Ask(string title, bool creating = false)
     {
         var window = new PasswordWindow(title, creating) { Owner = Application.Current.MainWindow };
-        return window.ShowDialog() == true ? window.Password : null;
+        bool accepted = window.ShowDialog() == true;
+        string? value = accepted ? window.Password : null;
+        window.Password = null;
+        return value;
     }
 }

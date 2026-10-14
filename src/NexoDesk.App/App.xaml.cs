@@ -38,7 +38,15 @@ public partial class App : Application
         if (!new System.Security.Principal.WindowsPrincipal(System.Security.Principal.WindowsIdentity.GetCurrent())
             .IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator))
         {
-            MessageBox.Show("Abra o NexoDesk New como administrador.", "NexoDesk New", MessageBoxButton.OK, MessageBoxImage.Warning);
+            try
+            {
+                var start = new ProcessStartInfo(AppPaths.ExecutablePath) { UseShellExecute = true, Verb = "runas" };
+                foreach (string argument in e.Args) start.ArgumentList.Add(argument);
+                using Process? elevated = Process.Start(start);
+            }
+            catch (System.ComponentModel.Win32Exception ex) when (ex.NativeErrorCode == 1223) { }
+            catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or IOException)
+            { MessageBox.Show("Não foi possível abrir como administrador.\n\n" + ex.Message, "NexoDesk New", MessageBoxButton.OK, MessageBoxImage.Error); }
             Shutdown(); return;
         }
 
@@ -84,7 +92,7 @@ public partial class App : Application
         {
             MessageBox.Show($"Não foi possível preparar o NexoDesk New neste computador.\n\n{ex.Message}",
                 "NexoDesk New", MessageBoxButton.OK, MessageBoxImage.Error);
-            Shutdown();
+            await ExitAsync();
             return;
         }
 
@@ -93,7 +101,7 @@ public partial class App : Application
             var setup = new SetupWindow(new SetupViewModel(_state));
             if (setup.ShowDialog() != true || _state.Config.Role is null)
             {
-                Shutdown();
+                await ExitAsync();
                 return;
             }
         }
@@ -127,6 +135,7 @@ public partial class App : Application
         else
         {
             await ServiceControl.ConfigureStartupAsync(false);
+            await ServiceControl.StopAsync(includeInterfaces: false);
             _admin = new AdminViewModel(state);
             _window = new MainWindow(new ShellViewModel(state, _admin, SwitchRole, () => ExitAsync(forUpdate: true)));
             _window.Closing += OnMainWindowClosing;
@@ -244,19 +253,25 @@ public partial class App : Application
         }
 
         _exiting = true;
-
-        // Libera a thread que escuta pedidos de "aparecer" para ela não ficar bloqueada.
-        try { _showSignal?.Set(); } catch (ObjectDisposedException) { }
+        if (_window is not null) _window.IsEnabled = false;
 
         foreach (SessionWindow w in Windows.OfType<SessionWindow>().ToList())
             w.Close();
-        if (_remote is not null)
+        // Suspende as consultas antes de parar os processos em qualquer papel.
+        if (_window?.DataContext is ShellViewModel shell) shell.Update.Dispose();
+        if (_remote is not null) await _remote.DisposeAsync();
+        try { await ServiceControl.StopAsync(); }
+        catch (Exception ex) when (ex is IOException or System.ComponentModel.Win32Exception)
         {
-            // Encerrar a rede/captura é melhor esforço e tem teto de tempo próprio;
-            // uma falha aqui não pode impedir o processo de morrer.
-            try { await _remote.DisposeAsync(); await ServiceControl.StopAsync(); }
-            catch (Exception ex) when (ex is IOException or ObjectDisposedException or InvalidOperationException) { }
+            _exiting = false;
+            if (_window is not null) _window.IsEnabled = true;
+            ShowWindow();
+            MessageBox.Show("Não foi possível concluir o encerramento dos processos. Tente sair novamente.\n\n" + ex.Message,
+                "NexoDesk New", MessageBoxButton.OK, MessageBoxImage.Error);
+            return;
         }
+        // Libera o listener apenas depois da limpeza concluída.
+        try { _showSignal?.Set(); } catch (ObjectDisposedException) { }
         _indicator?.CloseForSessionEnd();
         _tray?.Dispose();
         _window?.Close();
@@ -266,7 +281,7 @@ public partial class App : Application
         try { _showSignal?.Dispose(); } catch (ObjectDisposedException) { }
 
         if (restart)
-            Process.Start(new ProcessStartInfo(AppPaths.ExecutablePath) { UseShellExecute = true });
+            Process.Start(new ProcessStartInfo(AppPaths.ExecutablePath) { UseShellExecute = true, Verb = "runas" });
 
         // Encerramento determinístico: uma leitura nativa pendente (TLS/GDI) ou a janela
         // oculta do ícone da bandeja pode manter o processo vivo depois do Shutdown(),

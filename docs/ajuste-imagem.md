@@ -41,7 +41,7 @@ A resolução maior continua sendo reduzida para caber: não há igualdade geral
 
 O envio de teclas exige foco na imagem. O ScrollViewer do WPF tenta focar a si mesmo ao receber o clique esquerdo; um botão de ajuste também recebe foco ao ser acionado. A 1.3.1 impede o contêiner de focar, marca o clique remoto como tratado e devolve foco à imagem após Nitidez/100%. A roda enviada ao remoto não rola simultaneamente o viewport local.
 
-Um teste de evento roteado reproduz o caminho desprotegido e confirma que o clique protegido não chega ao contêiner, sem abrir janela nativa. O transporte de teclado permanece preservado. Confirmação de digitação em sessão real ainda depende do teste nos PCs. [Implementação oficial do ScrollViewer](https://github.com/dotnet/wpf/blob/main/src/Microsoft.DotNet.Wpf/src/PresentationFramework/System/Windows/Controls/ScrollViewer.cs).
+Um teste de evento roteado reproduz o caminho desprotegido e confirma que o clique protegido não chega ao contêiner, sem abrir janela nativa. O transporte de teclado permanece preservado. Usuário confirmou que o problema de teclado foi resolvido após a correção; cenários adicionais de atalhos e troca de foco continuam pendentes. [Implementação oficial do ScrollViewer](https://github.com/dotnet/wpf/blob/main/src/Microsoft.DotNet.Wpf/src/PresentationFramework/System/Windows/Controls/ScrollViewer.cs).
 
 ## Fontes
 

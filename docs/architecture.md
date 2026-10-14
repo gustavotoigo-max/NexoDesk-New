@@ -10,6 +10,8 @@ O serviço não captura na Session 0. Ele duplica seu token SYSTEM, seleciona a 
 
 Job Object encerra o agente se o supervisor morrer. Troca de sessão física fecha a conexão e relança o agente. Reconexão manual. Encerramento normal pede shutdown, libera entradas e fecha canais; término forçado é fallback.
 
+A saída explícita pela bandeja ou pelo ADMIN primeiro encerra sessões/consultas, pede parada ao SCM e espera até 20 s pelos processos do serviço. Se travarem, desativa temporariamente a recuperação e termina somente caminhos conhecidos desta instalação, conferindo o caminho e encerrando pelo mesmo handle para evitar reutilização de PID. Instalação/atualização/desinstalação também encerram interface, supervisor e agente antes de substituir arquivos. Tailscale e executáveis de outras pastas são preservados. [Operação e verificações](processos-atualizacao.md).
+
 IPC usa pipe local com ACL de SYSTEM/administradores, autenticação do processo servidor e rejeição de clientes de rede. Comandos enumerados e payload de até 64 KiB.
 
 Configuração compartilhada usa trava de arquivo entre processos e substituição atômica. O worker monitora política e rede a cada dois segundos. Revogação, alteração de senha e desabilitação cortam sessões existentes.

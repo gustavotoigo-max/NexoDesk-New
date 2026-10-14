@@ -1,4 +1,6 @@
+using System.ComponentModel;
 using System.Diagnostics;
+using System.Collections.Concurrent;
 using System.IO;
 using System.Security.Principal;
 using System.Xml.Linq;
@@ -10,11 +12,14 @@ public static class ServiceControl
 {
     private const string ServiceName = "NexoDeskRemote";
     private const string TaskName = "NexoDesk-New.Interface";
+    private static readonly ConcurrentDictionary<int, Process> Commands = new();
+    private static bool _stopping;
 
     public static async Task EnsureStartedAsync()
     {
         var query = await RunAsync("sc.exe", ["query", ServiceName]);
         if (query.Code != 0) throw new IOException("Instale o NexoDesk New com o instalador para registrar o serviço Windows.");
+        await ConfigureRecoveryAsync(true);
         var start = await RunAsync("sc.exe", ["start", ServiceName]);
         if (start.Code is not 0 and not 1056) throw new IOException("O serviço Windows não iniciou. Consulte o registro do serviço.");
     }
@@ -65,22 +70,62 @@ public static class ServiceControl
                 E("Command", AppPaths.ExecutablePath), E("Arguments", "--minimized") }))));
     }
 
-    public static async Task StopAsync()
+    public static async Task StopAsync(bool includeInterfaces = true)
     {
-        var result = await RunAsync("sc.exe", ["stop", ServiceName]);
-        if (result.Code is not 0 and not 1062 and not 1060) throw new IOException("Não foi possível parar o serviço Windows.");
+        _stopping = true;
+        try
+        {
+            // Encerra também comandos de configuração pendentes criados por esta interface.
+            foreach (Process command in Commands.Values)
+                try { command.Kill(); } catch (Exception ex) when (ex is InvalidOperationException or Win32Exception) { }
+            string root = Path.GetDirectoryName(AppPaths.ExecutablePath)!;
+            var result = await RunAsync("sc.exe", ["stop", ServiceName], duringStop: true);
+            if (result.Code is not 0 and not 1062 and not 1060 and not 1061)
+                throw new IOException("Não foi possível parar o serviço Windows.");
+            if (!await InstallationProcesses.WaitForServicesAsync(root, TimeSpan.FromSeconds(20)))
+            {
+                // Impede que a recuperação do SCM recrie o supervisor durante a limpeza forçada.
+                await ConfigureRecoveryAsync(false, duringStop: true);
+                try { await InstallationProcesses.TerminateAsync(root, includeInterfaces); }
+                finally { await ConfigureRecoveryAsync(true, duringStop: true); }
+            }
+            else if (includeInterfaces)
+                await InstallationProcesses.TerminateAsync(root, true);
+        }
+        finally { _stopping = false; }
     }
 
-    private static async Task<(int Code, string Output)> RunAsync(string executable, string[] args)
+    private static async Task ConfigureRecoveryAsync(bool enabled, bool duringStop = false)
     {
-        var info = new ProcessStartInfo(executable) { UseShellExecute = false, CreateNoWindow = true,
+        var result = await RunAsync("sc.exe", ["failure", ServiceName, "reset=", "86400", "actions=",
+            enabled ? "restart/5000/restart/15000/restart/60000" : ""], duringStop);
+        if (result.Code is not 0 and not 1060)
+            throw new IOException("Não foi possível configurar a recuperação do serviço Windows.");
+    }
+
+    private static async Task<(int Code, string Output)> RunAsync(string executable, string[] args, bool duringStop = false)
+    {
+        if (_stopping && !duringStop) throw new IOException("O NexoDesk está encerrando os processos.");
+        var info = new ProcessStartInfo(Path.Combine(Environment.SystemDirectory, executable)) { UseShellExecute = false, CreateNoWindow = true,
             RedirectStandardOutput = true, RedirectStandardError = true, RedirectStandardInput = true };
         foreach (string arg in args) info.ArgumentList.Add(arg);
         using var process = Process.Start(info) ?? throw new IOException("Não foi possível executar " + executable);
-        process.StandardInput.Close();
-        Task<string> output = process.StandardOutput.ReadToEndAsync();
-        Task<string> error = process.StandardError.ReadToEndAsync();
-        await process.WaitForExitAsync();
-        return (process.ExitCode, await output + await error);
+        int pid = process.Id;
+        Commands[pid] = process;
+        try
+        {
+            process.StandardInput.Close();
+            Task<string> output = process.StandardOutput.ReadToEndAsync();
+            Task<string> error = process.StandardError.ReadToEndAsync();
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+            try { await process.WaitForExitAsync(timeout.Token); }
+            catch (OperationCanceledException)
+            {
+                try { process.Kill(); } catch (InvalidOperationException) { }
+                throw new IOException("O Windows demorou demais para concluir o comando " + executable + ".");
+            }
+            return (process.ExitCode, await output + await error);
+        }
+        finally { Commands.TryRemove(pid, out _); }
     }
 }

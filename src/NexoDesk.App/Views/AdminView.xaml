@@ -30,7 +30,7 @@
             </Grid>
 
             <!-- Lista -->
-            <Border Style="{DynamicResource Nx.Card}" Margin="0,0,0,16">
+            <Border Style="{DynamicResource Nx.Section}" Margin="0,0,0,16">
                 <StackPanel>
                     <Grid Margin="0,0,0,10">
                         <Grid.ColumnDefinitions>
@@ -47,7 +47,7 @@
                         </StackPanel>
                     </Grid>
 
-                    <Border CornerRadius="10" BorderBrush="{DynamicResource Nx.Border}" BorderThickness="1">
+                    <Border CornerRadius="6" BorderBrush="{DynamicResource Nx.Border}" BorderThickness="1">
                         <Border.Style>
                             <Style TargetType="Border">
                                 <Style.Triggers>
@@ -112,14 +112,14 @@
                         </Border>
                         <TextBlock Text="Nenhum PC REMOTO ainda" FontWeight="SemiBold" FontSize="14" HorizontalAlignment="Center" />
                         <TextBlock Style="{DynamicResource Nx.Muted}" TextAlignment="Center" MaxWidth="440" Margin="0,6,0,16"
-                                   Text="Instale o NexoDesk New no outro computador, escolha PC REMOTO e clique em Gerar código. Depois clique aqui em Adicionar PC REMOTO e digite o endereço e o código que aparecem lá." />
+                                   Text="Instale o NexoDesk New no outro computador, escolha PC REMOTO e clique em Gerar código. Depois clique aqui em Adicionar PC REMOTO e cole o código de acesso gerado lá." />
                         <Button Style="{DynamicResource Nx.Button.Primary}" Content="Adicionar PC REMOTO" Command="{Binding AddComputerCommand}" HorizontalAlignment="Center" />
                     </StackPanel>
                 </StackPanel>
             </Border>
 
             <!-- Conexão -->
-            <Border Style="{DynamicResource Nx.Card}" Margin="0,0,0,16">
+            <Border Style="{DynamicResource Nx.Section}" Margin="0,0,0,16">
                 <StackPanel>
                     <TextBlock Style="{DynamicResource Nx.SectionLabel}" Text="CONEXÃO" />
                     <Grid>
@@ -176,7 +176,7 @@
             </Border>
 
             <!-- Registro -->
-            <Border Style="{DynamicResource Nx.Card}">
+            <Border Style="{DynamicResource Nx.Section}">
                 <StackPanel>
                     <Grid Margin="0,0,0,8">
                         <TextBlock Style="{DynamicResource Nx.SectionLabel}" Text="REGISTRO" Margin="0" VerticalAlignment="Center" />

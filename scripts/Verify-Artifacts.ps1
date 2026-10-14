@@ -49,7 +49,11 @@ if ($taskInstallerSource -notmatch '(?m)^PrivilegesRequired=admin\s*$' -or
     $taskInstallerSource -match '(?m)^PrivilegesRequiredOverridesAllowed\s*=') {
     throw 'O instalador deve exigir administrador sem permitir redução de privilégios.'
 }
-Write-Host 'Instalador configurado para exigir elevação administrativa.'
+if ($taskInstallerSource -notmatch '(?m)^Filename: "\{app\}\\\{#AppExe\}"; Description:.*Flags:.*postinstall.*runascurrentuser') {
+    throw 'A primeira abertura pelo instalador deve herdar a elevação administrativa.'
+}
+if ($taskInstallerSource -match '(?im)taskkill.*?/IM') { throw 'Limpeza por nome global não é permitida: conferir caminho e PID.' }
+Write-Host 'Instalador configurado para exigir elevação e abrir a interface elevada.'
 foreach ($taskRole in @('app','service')) {
     foreach ($taskDependency in @('coreclr.dll','System.Private.CoreLib.dll','NexoDesk.Shared.dll','NexoDesk.Desktop.dll')) {
         if (-not (Test-Path -LiteralPath (Join-Path $taskRoot "publish\$taskRole\$taskDependency"))) {

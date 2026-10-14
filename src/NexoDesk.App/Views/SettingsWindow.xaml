@@ -19,7 +19,7 @@
     <StackPanel Margin="28,22,28,22">
 
         <!-- Este computador -->
-        <Border Style="{DynamicResource Nx.Card}" Margin="0,0,0,14">
+        <Border Style="{DynamicResource Nx.Section}" Margin="0,0,0,14">
             <StackPanel>
                 <TextBlock Style="{DynamicResource Nx.SectionLabel}" Text="ESTE COMPUTADOR" />
                 <Grid>
@@ -37,7 +37,7 @@
         </Border>
 
         <!-- Modo -->
-        <Border Style="{DynamicResource Nx.Card}" Margin="0,0,0,14">
+        <Border Style="{DynamicResource Nx.Section}" Margin="0,0,0,14">
             <StackPanel>
                 <TextBlock Style="{DynamicResource Nx.SectionLabel}" Text="MODO" />
                 <Grid>
@@ -52,7 +52,7 @@
         </Border>
 
         <!-- O seletor preserva o motor atual; o experimental aguarda implementação. -->
-        <Border Style="{DynamicResource Nx.Card}" Margin="0,0,0,14">
+        <Border Style="{DynamicResource Nx.Section}" Margin="0,0,0,14">
             <StackPanel>
                 <TextBlock Style="{DynamicResource Nx.SectionLabel}" Text="TRANSMISSÃO DE TELA" />
                 <RadioButton Content="Estável — atual, sem perda" GroupName="Transmission" Foreground="{DynamicResource Nx.Text}"
@@ -64,7 +64,7 @@
             </StackPanel>
         </Border>
 
-        <Border Style="{DynamicResource Nx.Card}" Margin="0,0,0,14"
+        <Border Style="{DynamicResource Nx.Section}" Margin="0,0,0,14"
                 Visibility="{Binding IsAdmin, Converter={StaticResource BoolToVisibility}}">
             <StackPanel>
                 <TextBlock Style="{DynamicResource Nx.SectionLabel}" Text="IMAGEM EM JANELA" />
@@ -76,7 +76,7 @@
         </Border>
 
         <!-- Aparência -->
-        <Border Style="{DynamicResource Nx.Card}" Margin="0,0,0,14">
+        <Border Style="{DynamicResource Nx.Section}" Margin="0,0,0,14">
             <StackPanel>
                 <TextBlock Style="{DynamicResource Nx.SectionLabel}" Text="APARÊNCIA" />
                 <Grid>
@@ -100,7 +100,7 @@
         </Border>
 
         <!-- Identidade -->
-        <Border Style="{DynamicResource Nx.Card}" Margin="0,0,0,18">
+        <Border Style="{DynamicResource Nx.Section}" Margin="0,0,0,18">
             <StackPanel>
                 <TextBlock Style="{DynamicResource Nx.SectionLabel}" Text="IDENTIDADE DE SEGURANÇA" />
                 <Grid>
@@ -124,7 +124,7 @@
         </Border>
 
         <!-- Atualização -->
-        <Border Style="{DynamicResource Nx.Card}" Margin="0,0,0,18">
+        <Border Style="{DynamicResource Nx.Section}" Margin="0,0,0,18">
             <StackPanel>
                 <TextBlock Style="{DynamicResource Nx.SectionLabel}" Text="ATUALIZAÇÃO" />
                 <Grid>

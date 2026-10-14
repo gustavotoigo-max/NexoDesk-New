@@ -40,7 +40,7 @@
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
-                <Border Width="44" Height="44" CornerRadius="10" Background="{DynamicResource Nx.AccentGradient}" Margin="0,0,16,0" VerticalAlignment="Top">
+                <Border Width="44" Height="44" CornerRadius="6" Background="{DynamicResource Nx.AccentGradient}" Margin="0,0,16,0" VerticalAlignment="Top">
                     <TextBlock FontFamily="{DynamicResource Nx.Icons}" Text="&#xE7F4;" FontSize="20" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
                 </Border>
                 <StackPanel Grid.Column="1">
@@ -58,13 +58,13 @@
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
-                <Border Width="44" Height="44" CornerRadius="10" Background="{DynamicResource Nx.Navy}" Margin="0,0,16,0" VerticalAlignment="Top">
+                <Border Width="44" Height="44" CornerRadius="6" Background="{DynamicResource Nx.Navy}" Margin="0,0,16,0" VerticalAlignment="Top">
                     <TextBlock FontFamily="{DynamicResource Nx.Icons}" Text="&#xE977;" FontSize="20" Foreground="{DynamicResource Nx.Cyan}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                 </Border>
                 <StackPanel Grid.Column="1">
                     <TextBlock FontSize="16" FontWeight="SemiBold" Text="PC REMOTO" />
                     <TextBlock Style="{DynamicResource Nx.Muted}" Margin="0,2,0,0"
-                               Text="Este computador será acessado pelo ADMIN. Fica aberto perto do relógio, pede permissão a cada acesso e mostra um aviso enquanto alguém estiver conectado." />
+                               Text="Este computador será acessado pelo ADMIN. Fica aberto perto do relógio, exige ADMIN pareado e senha e avisa quando alguém se conecta." />
                 </StackPanel>
             </Grid>
         </RadioButton>
