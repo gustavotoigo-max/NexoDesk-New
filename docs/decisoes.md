@@ -20,6 +20,7 @@
 - Tela cheia opcional na 1.2.1, mantendo a escolha de 100% e restaurando a janela ao sair. Usuário confirmou que funcionou perfeitamente no seu teste.
 - Autorização permanente do usuário: a cada nova versão, enviar o código ao GitHub e publicar o release com instalador e SHA-256 após as verificações necessárias, sem pedir nova confirmação de publicação. Conferir conclusão do workflow e disponibilidade no atualizador.
 - Ajuste nítido local autorizado e implementado na 1.3.0: redução cúbica Direct2D e Sharpen moderado, apresentação GPU compartilhada com WPF, retorno ao ajuste anterior por botão/configuração ou falha de GPU. Não muda a resolução física; 100% não aplica filtros. Aceitação visual nos PCs ainda pendente.
+- Usuário relatou teclado sem funcionamento após a 1.3.0. Correção de foco na 1.3.1: cliques remotos não focam o contêiner; botões Nitidez/100% devolvem foco à imagem. Confirmação de digitação no PC do usuário pendente.
 - Plano da evolução em docs/plano-transmissao.md: instrumentação, envio limitado, DXGI e H.264, mantendo o Estável como padrão.
 - Instalação separada da antiga: novo AppId, Program Files\NexoDesk New e ProgramData\NexoDesk-New.
 - Não há migração silenciosa de certificados, senhas ou pareamentos.

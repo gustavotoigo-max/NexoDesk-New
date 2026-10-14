@@ -19,7 +19,7 @@ Desligar Nitidez usa o filtro Fant anterior. **Configurações > Imagem em janel
 
 ## Comparação e verificações
 
-216 testes aprovados: incluem efeitos Direct2D reais em WARP (renderizador por CPU para testes), cores/alpha, alteração de um pixel sem recriar a base, troca de dimensões, invalidação, dados inválidos, configuração antiga, DPI e fallback. O caminho original é renderizado em bitmap sem abrir janela nativa.
+217 testes aprovados na 1.3.1: incluem efeitos Direct2D reais em WARP (renderizador por CPU para testes), cores/alpha, alteração de um pixel sem recriar a base, troca de dimensões, invalidação, dados inválidos, configuração antiga, DPI e fallback. O caminho original é renderizado em bitmap sem abrir janela nativa.
 
 A ferramenta abaixo gera o mesmo quadro sintético com texto, valores monetários, cores e linhas, nas reduções de 50%, 66,7% e 75%. Exporta Fant, cúbico e cúbico com nitidez, além de testar a textura compartilhada na GPU local:
 
@@ -36,6 +36,12 @@ Duas medições locais de envio de um bloco 128×128 e submissão de desenho par
 Comparar Nitidez ligada/desligada em texto pequeno, planilhas, pontos/vírgulas, fundos claros/escuros e movimento. Verificar clique/cursor após redimensionar, DPI 125%/150%, monitor secundário, minimizar/restaurar, tela cheia e 100%. Se houver halos ou custo excessivo, desligar Nitidez conserva o acesso anterior.
 
 A resolução maior continua sendo reduzida para caber: não há igualdade geral a 100%. Monitor virtual/resolução dinâmica remota permanecem em pesquisa.
+
+## Correção de teclado — 1.3.1
+
+O envio de teclas exige foco na imagem. O ScrollViewer do WPF tenta focar a si mesmo ao receber o clique esquerdo; um botão de ajuste também recebe foco ao ser acionado. A 1.3.1 impede o contêiner de focar, marca o clique remoto como tratado e devolve foco à imagem após Nitidez/100%. A roda enviada ao remoto não rola simultaneamente o viewport local.
+
+Um teste de evento roteado reproduz o caminho desprotegido e confirma que o clique protegido não chega ao contêiner, sem abrir janela nativa. O transporte de teclado permanece preservado. Confirmação de digitação em sessão real ainda depende do teste nos PCs. [Implementação oficial do ScrollViewer](https://github.com/dotnet/wpf/blob/main/src/Microsoft.DotNet.Wpf/src/PresentationFramework/System/Windows/Controls/ScrollViewer.cs).
 
 ## Fontes
 

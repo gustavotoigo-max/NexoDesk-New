@@ -22,7 +22,7 @@
                 <Run Text="  ·  " /><Run Text="{Binding DataRateText, Mode=OneWay}" Foreground="{DynamicResource Nx.OnNavy}" />
             </TextBlock>
             <ToggleButton x:Name="ActualScale" Content="100%" ToolTip="Mostrar pixels em tamanho real; desmarque para ajustar à janela." Click="OnToggleScale" Margin="0,0,8,0" Padding="10,4" />
-            <ToggleButton Content="Nitidez" IsChecked="{Binding EnhancedWindowFit}" ToolTip="Melhorar a imagem reduzida. Desative para comparar com o ajuste anterior; 100% preserva os pixels originais."
+            <ToggleButton Content="Nitidez" IsChecked="{Binding EnhancedWindowFit}" Click="OnToggleSharpness" ToolTip="Melhorar a imagem reduzida. Desative para comparar com o ajuste anterior; 100% preserva os pixels originais."
                           Margin="0,0,8,0" Padding="10,4" />
             <Button Style="{DynamicResource Nx.Button.Navy}" Content="Desconectar" Command="{Binding DisconnectCommand}" Margin="0,0,4,0" />
         </StackPanel>
@@ -48,7 +48,7 @@
 
     <Grid Background="#05070C" ClipToBounds="True">
         <!-- Vídeo remoto: ajustado à área útil, sem distorção -->
-        <ScrollViewer x:Name="VideoScroll" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Disabled"
+        <ScrollViewer x:Name="VideoScroll" Focusable="False" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Disabled"
                       HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" ScrollChanged="OnVideoScroll">
             <appControls:AdaptiveDesktopImage x:Name="RemoteImage" Source="{Binding Frame}" EnhancedFit="{Binding EnhancedWindowFit}"
                                              SnapsToDevicePixels="True" UseLayoutRounding="True" Focusable="True" />

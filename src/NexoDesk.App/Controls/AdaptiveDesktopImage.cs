@@ -67,6 +67,13 @@ public sealed class AdaptiveDesktopImage : FrameworkElement
         image.Refresh();
     }
 
+    /// <summary>Mantém o foco de teclado na imagem; um clique remoto não deve focar o ScrollViewer.</summary>
+    internal void FocusForRemoteInput(System.Windows.Input.MouseButtonEventArgs? click = null)
+    {
+        Focus();
+        if (click is not null) click.Handled = true;
+    }
+
     public void Refresh()
     {
         _ready = false;

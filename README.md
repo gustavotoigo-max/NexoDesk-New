@@ -18,11 +18,11 @@ Acesso remoto privado para até cinco PCs Windows x64. Um aplicativo e um instal
 
 **Estado:** implementação e instalador disponíveis. Compilação e testes locais descritos em [validação](docs/validacao.md). Login/UAC, reinício e operação entre dois PCs ainda exigem validação real. Instalador sem assinatura Authenticode.
 
-**Versão 1.3.0**, com ajuste nítido à janela e tela cheia opcional na sessão (Ctrl+Alt+F11). Instalador e SHA-256 disponíveis no [release](https://github.com/gustavotoigo-max/NexoDesk-New/releases/tag/v1.3.0). [Plano da transmissão experimental](docs/plano-transmissao.md).
+**Versão 1.3.1**, com ajuste nítido à janela e tela cheia opcional na sessão (Ctrl+Alt+F11). Instalador e SHA-256 disponíveis no [release](https://github.com/gustavotoigo-max/NexoDesk-New/releases/tag/v1.3.1). [Plano da transmissão experimental](docs/plano-transmissao.md).
 
 ## Instalar
 
-Baixe o [instalador 1.3.0](https://github.com/gustavotoigo-max/NexoDesk-New/releases/download/v1.3.0/NexoDesk-New-Setup-1.3.0.exe) e execute nos dois computadores. A cópia local fica em **artifacts/NexoDesk-New-Setup-1.3.0.exe**. As versões 1.1.0 e 1.2.1 permanecem nos releases anteriores. O instalador inclui o runtime .NET; não é necessário baixá-lo para executar.
+Baixe o [instalador 1.3.1](https://github.com/gustavotoigo-max/NexoDesk-New/releases/download/v1.3.1/NexoDesk-New-Setup-1.3.1.exe) e execute nos dois computadores. A cópia local fica em **artifacts/NexoDesk-New-Setup-1.3.1.exe**. As versões 1.1.0 e 1.2.1 permanecem nos releases anteriores. O instalador inclui o runtime .NET; não é necessário baixá-lo para executar.
 
 1. No remoto, escolha **PC REMOTO**.
 2. Escolha **Tailscale (internet)** ou **Rede local**, selecione o IP quando necessário e aplique.

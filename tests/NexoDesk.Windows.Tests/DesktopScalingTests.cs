@@ -170,6 +170,43 @@ public class DesktopScalingTests
         });
     }
 
+    [Fact]
+    public void RemoteClickDoesNotReachFocusStealingScrollViewer()
+    {
+        RunSta(() =>
+        {
+            // Reproduz o evento real do WPF sem janela nativa: o contêiner tenta focar a si mesmo.
+            foreach (bool protectClick in new[] { false, true })
+            {
+                var surface = new AdaptiveDesktopImage { Focusable = true };
+                var scroll = new FocusStealingScrollViewer { Content = surface };
+                surface.MouseDown += (_, e) =>
+                {
+                    if (protectClick) surface.FocusForRemoteInput(e);
+                    else surface.Focus();
+                };
+                var args = new System.Windows.Input.MouseButtonEventArgs(
+                    System.Windows.Input.Mouse.PrimaryDevice, 0, System.Windows.Input.MouseButton.Left)
+                {
+                    RoutedEvent = System.Windows.Input.Mouse.MouseDownEvent
+                };
+                surface.RaiseEvent(args);
+                Assert.Equal(!protectClick, scroll.AttemptedFocus);
+                if (protectClick) Assert.True(args.Handled);
+            }
+        });
+    }
+
+    private sealed class FocusStealingScrollViewer : System.Windows.Controls.ScrollViewer
+    {
+        public bool AttemptedFocus { get; private set; }
+        protected override void OnMouseLeftButtonDown(System.Windows.Input.MouseButtonEventArgs args)
+        {
+            AttemptedFocus = true;
+            base.OnMouseLeftButtonDown(args);
+        }
+    }
+
     internal static byte[] Solid(int w, int h, byte b, byte g, byte r)
     {
         var pixels = new byte[w * h * 4];

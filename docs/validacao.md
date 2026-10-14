@@ -2,7 +2,7 @@
 
 ## Executado localmente
 
-- Compilação Release sem erros/avisos; 216 testes aprovados na 1.3.0 (140 unitários, 30 de integração e 46 Windows).
+- Compilação Release sem erros/avisos; 217 testes aprovados na 1.3.1 (140 unitários, 30 de integração e 47 Windows).
 - Framing, mensagens, estados, certificados e configuração.
 - TLS mútuo real em loopback, pareamento, streaming e sessão única.
 - Senha correta/incorreta/ausente e prova vinculada a nonce/certificados/modo.
@@ -16,6 +16,7 @@
 - Entrada durante apresentação bloqueada em TLS real; primeira imagem entregue após criação do consumidor.
 - Estados de consulta do atualizador, origem/hash de release, rejeição de drafts/pré-releases, consulta manual antes da instalação, cliques repetidos, cancelamento e parâmetros de encerramento da versão antiga.
 - Benchmark sintético de texto: 257.007 bytes em JPEG completo versus 1.375 bytes em blocos sem perda.
+- Regressão de foco: evento roteado real do WPF reproduz a tentativa do ScrollViewer de tomar foco, e o clique protegido impede que chegue ao contêiner. Validação sem janela nativa; confirmação de digitação nos PCs ainda necessária.
 - Efeitos Direct2D nativos em WARP: cor/alpha opacos, alteração de um pixel, troca de resolução, invalidação de cache e buffers inválidos.
 - Ajuste com DPI 100%, 125% e 150%, mapeamento do mouse, atualização do bitmap original e fallback por falha de GPU.
 - Comparação visual sintética de Fant/cúbico/cúbico com nitidez em 50%, 66,7% e 75%; superfície D3D9Ex/D3D11 compartilhada funcionando na GPU local. [Detalhes e procedimento](ajuste-imagem.md).
@@ -23,7 +24,7 @@
 
 CI inicialmente encontrou uma corrida no teste de mouse/teclado: fechar o TLS logo após enviar não confirma processamento remoto. O fixture agora sinaliza a entrada recebida antes do encerramento, mantendo a verificação de ordem e liberação de teclas; código de sessão/transmissão preservado.
 
-TRX em tests/*/TestResults. Log final da entrega em artifacts/build-1.3.0.log.
+TRX em tests/*/TestResults. Log final da entrega em artifacts/build-1.3.1.log.
 
 ## Confirmado pelo usuário
 
@@ -40,6 +41,7 @@ O ambiente de execução do desenvolvimento não tem token elevado do Windows. N
 - [ ] Reiniciar e conectar antes do login.
 - [ ] Bloquear/desbloquear, atravessar UAC e controlar aplicativos elevados.
 - [ ] Confirmar aviso de dez segundos, Fechar aviso sem desconectar, estado na bandeja, aviso sem UI e corte local.
+- [ ] Confirmar digitação após clicar na imagem, alternar Nitidez/100%, entrar/sair de tela cheia e usar Alt+Tab; confirmar teclas de navegação e atalhos no remoto.
 - [ ] Comparar ajuste nítido/anterior em texto, planilhas e movimento nos PCs; redimensionar, mudar DPI/monitor, minimizar/restaurar e alternar 100%.
 - [ ] Cobertura adicional de tela cheia: restauração da janela, Alt+Tab, Ctrl+Alt+F11 e F11 remoto, DPI misto e monitor secundário.
 - [ ] Trocar resolução/DPI; validar clique/arraste/scroll/teclado ABNT2.
@@ -49,4 +51,4 @@ O ambiente de execução do desenvolvimento não tem token elevado do Windows. N
 
 GDI/blocos Brotli sem perda implementados; JPEG permanece para negociação com versões antigas. DXGI/H.264 e medições em redes reais não foram executados. Conteúdo protegido pode não ser capturado. Sem Ctrl+Alt+Del, áudio, arquivos, clipboard ou múltiplos monitores.
 
-Instalador 1.3.0 sem assinatura, com runtime e SHA-256 verificados; publicação no GitHub pelo workflow de compilação, testes e release. Instaladores 1.1.0, 1.2.0 e 1.2.1 preservados. Novo motor experimental não implementado nesta entrega.
+Instalador 1.3.1 sem assinatura, com runtime e SHA-256 verificados; publicação no GitHub pelo workflow de compilação, testes e release. Instaladores 1.1.0, 1.2.0 e 1.2.1 preservados. Novo motor experimental não implementado nesta entrega.

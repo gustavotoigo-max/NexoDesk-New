@@ -47,7 +47,7 @@ public partial class SessionWindow : NxWindow
         RemoteImage.MouseDown += OnMouseDown;
         RemoteImage.MouseUp += OnMouseUp;
         RemoteImage.MouseWheel += OnMouseWheel;
-        RemoteImage.MouseEnter += (_, _) => { if (_vm.CanControl) RemoteImage.Focus(); };
+        RemoteImage.MouseEnter += (_, _) => { if (_vm.CanControl) RemoteImage.FocusForRemoteInput(); };
         PreviewKeyDown += OnKeyDown;
         PreviewKeyUp += OnKeyUp;
         Deactivated += (_, _) => ReleaseHeldInputs();
@@ -125,7 +125,7 @@ public partial class SessionWindow : NxWindow
         }
         ApplyScale();
         UpdateCursorOverlay();
-        RemoteImage.Focus();
+        RestoreRemoteKeyboardFocus();
     }
 
     private void RestoreWindowMode()
@@ -208,7 +208,18 @@ public partial class SessionWindow : NxWindow
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool SetWindowPos(IntPtr window, IntPtr after, int x, int y, int width, int height, uint flags);
 
-    private void OnToggleScale(object sender, RoutedEventArgs e) { ApplyScale(); UpdateCursorOverlay(); }
+    private void RestoreRemoteKeyboardFocus()
+    {
+        if (_vm.CanControl) RemoteImage.FocusForRemoteInput();
+    }
+
+    private void OnToggleScale(object sender, RoutedEventArgs e)
+    {
+        ApplyScale();
+        UpdateCursorOverlay();
+        RestoreRemoteKeyboardFocus();
+    }
+    private void OnToggleSharpness(object sender, RoutedEventArgs e) => RestoreRemoteKeyboardFocus();
     private void OnVideoScroll(object sender, ScrollChangedEventArgs e) { if (_vm is not null) UpdateCursorOverlay(); }
     private void ApplyScale()
     {
@@ -242,7 +253,7 @@ public partial class SessionWindow : NxWindow
         PointerButton button = Button(e.ChangedButton);
         if (button != PointerButton.None && TryNormalize(e, out double nx, out double ny))
         {
-            RemoteImage.Focus();
+            RemoteImage.FocusForRemoteInput(e);
             RemoteImage.CaptureMouse();
             _buttonsDown.Add(button);
             _vm.SendPointer(_lastX = nx, _lastY = ny, button, PointerAction.Down);
@@ -265,7 +276,10 @@ public partial class SessionWindow : NxWindow
     private void OnMouseWheel(object sender, MouseWheelEventArgs e)
     {
         if (_vm.CanControl && TryNormalize(e, out double nx, out double ny))
+        {
             _vm.SendPointer(nx, ny, PointerButton.None, PointerAction.Wheel, e.Delta);
+            e.Handled = true; // A roda já foi enviada ao remoto; não rolar também o viewport local.
+        }
     }
 
     private void OnKeyDown(object sender, KeyEventArgs e)

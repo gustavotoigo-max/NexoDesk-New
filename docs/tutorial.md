@@ -2,7 +2,7 @@
 
 ## Instalar
 
-1. Execute NexoDesk-New-Setup-1.3.0.exe como administrador nos dois PCs.
+1. Execute NexoDesk-New-Setup-1.3.1.exe como administrador nos dois PCs.
 2. Abra pelo atalho, aceite a elevação e escolha papel/nome.
 3. O serviço NexoDeskRemote é registrado como SYSTEM. A senha solicitada pelo NexoDesk New é própria do acesso remoto; não é a senha da conta Windows.
 
@@ -39,6 +39,7 @@ Trocar a senha corta a sessão existente. Após recusa, a senha salva é limpa e
 - Desmarcar **100%** ajusta a imagem à área útil da janela e ao DPI local.
 - **Nitidez**, na barra da sessão, ativa redução cúbica e nitidez moderada quando a imagem precisa ser reduzida. Desative para comparar com o ajuste anterior; 100% não recebe filtros.
 - **Configurações > Imagem em janela > Melhorar nitidez ao ajustar à janela** salva a preferência para novas sessões. O botão da sessão também salva essa preferência.
+- Na 1.3.1, clicar na imagem e alternar Nitidez/100% preserva ou recupera o foco do teclado remoto. As barras de rolagem continuam disponíveis em 100%.
 - O rodapé informa **Ajuste nítido** ou **Ajuste original**. Se a GPU não aceitar o recurso, a visualização original continua disponível automaticamente.
 - **Tela cheia**, no rodapé da sessão, usa o monitor atual sem mudar a resolução do PC REMOTO.
 - **Sair da tela cheia** ou **Ctrl+Alt+F11** restaura a janela; esse atalho é tratado localmente. F11 sozinho continua disponível no remoto.
