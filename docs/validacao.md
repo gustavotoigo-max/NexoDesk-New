@@ -21,6 +21,8 @@
 - Comparação visual sintética de Fant/cúbico/cúbico com nitidez em 50%, 66,7% e 75%; superfície D3D9Ex/D3D11 compartilhada funcionando na GPU local. [Detalhes e procedimento](ajuste-imagem.md).
 - Publicações autossuficientes, manifestos administrativos da interface/serviço, configuração de elevação do instalador e SHA-256 verificados.
 
+CI inicialmente encontrou uma corrida no teste de mouse/teclado: fechar o TLS logo após enviar não confirma processamento remoto. O fixture agora sinaliza a entrada recebida antes do encerramento, mantendo a verificação de ordem e liberação de teclas; código de sessão/transmissão preservado.
+
 TRX em tests/*/TestResults. Log final da entrega em artifacts/build-1.3.0.log.
 
 ## Confirmado pelo usuário

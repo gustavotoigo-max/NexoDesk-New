@@ -47,8 +47,23 @@ internal sealed class RecordingInput : IInputSink
     public List<object> Events { get; } = [];
     public int ReleaseCount { get; private set; }
 
-    public void Apply(PointerEventMessage pointer) { lock (Events) Events.Add(pointer); }
-    public void Apply(KeyEventMessage key) { lock (Events) Events.Add(key); }
+    private readonly SemaphoreSlim _applied = new(0);
+    public void Apply(PointerEventMessage pointer) => Record(pointer);
+    public void Apply(KeyEventMessage key) => Record(key);
+    private void Record(object input)
+    {
+        lock (Events) Events.Add(input);
+        _applied.Release();
+    }
+    public async Task WaitForEventsAsync(int count, TimeSpan timeout)
+    {
+        using var cts = new CancellationTokenSource(timeout);
+        while (true)
+        {
+            lock (Events) if (Events.Count >= count) return;
+            await _applied.WaitAsync(cts.Token);
+        }
+    }
     public void ReleaseAll() => ReleaseCount++;
 }
 

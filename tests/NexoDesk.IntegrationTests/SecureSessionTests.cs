@@ -160,10 +160,14 @@ public class SecureSessionTests
         Assert.True(session.CanControl);
         await session.SendPointerAsync(new PointerEventMessage(0.5, 0.5, PointerButton.Left, PointerAction.Down, 0), CancellationToken.None);
         await session.SendKeyAsync(new KeyEventMessage(0x1E, 0x41, false, KeyAction.Down), CancellationToken.None);
+        // Enviar pelo TLS não confirma processamento remoto. Aguarda o sink antes de fechar o canal.
+        await input.WaitForEventsAsync(2, Wait);
         await session.DisconnectAsync();
 
         await agent.Accepted.WaitAsync(Wait);
         Assert.Equal(2, input.Events.Count);
+        Assert.IsType<PointerEventMessage>(input.Events[0]);
+        Assert.IsType<KeyEventMessage>(input.Events[1]);
         Assert.True(input.ReleaseCount >= 1);
     }
 
