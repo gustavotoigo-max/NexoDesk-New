@@ -132,21 +132,31 @@ public sealed class ShellViewModel : ObservableObject
 public sealed class UpdateViewModel : ObservableObject, IDisposable
 {
     private readonly Func<Task> _requestExit;
+    private readonly Func<CancellationToken, Task<UpdateCheckResult>> _checkForUpdates;
+    private readonly Func<UpdateInfo, IProgress<double>?, CancellationToken, Task<bool>> _downloadAndRun;
     private readonly CancellationTokenSource _stopChecks = new();
     private UpdateInfo? _info;
     private string _status = "";
     private bool _busy;
     private bool _checking;
 
-    public UpdateViewModel(Func<Task> requestExit)
+    public UpdateViewModel(Func<Task> requestExit,
+        Func<CancellationToken, Task<UpdateCheckResult>>? checkForUpdates = null,
+        Func<UpdateInfo, IProgress<double>?, CancellationToken, Task<bool>>? downloadAndRun = null)
     {
         _requestExit = requestExit;
+        _checkForUpdates = checkForUpdates ?? (ct => UpdateService.CheckAsync(ct));
+        _downloadAndRun = downloadAndRun ?? UpdateService.DownloadAndRunAsync;
         CheckCommand = new AsyncRelayCommand(CheckAsync, () => !_busy && !_checking);
-        InstallCommand = new AsyncRelayCommand(InstallAsync, () => Available && !_busy);
+        InstallCommand = new AsyncRelayCommand(InstallAsync, () => Available && !_busy && !_checking);
+        UpdateCommand = new AsyncRelayCommand(UpdateAsync, () => !_busy && !_checking && !_stopChecks.IsCancellationRequested);
     }
 
     public ICommand CheckCommand { get; }
     public ICommand InstallCommand { get; }
+    public ICommand UpdateCommand { get; }
+    public string Heading => Available ? AvailableText : $"Versão instalada: {AppInfo.Version}";
+    public string ActionText => Busy ? "Atualizando…" : _checking ? "Verificando…" : "Atualizar";
 
     public bool Available => _info is not null;
     public string AvailableText => _info is null ? "" : $"Atualização disponível: versão {_info.Version}";
@@ -155,29 +165,48 @@ public sealed class UpdateViewModel : ObservableObject, IDisposable
     public bool Busy
     {
         get => _busy;
-        private set { if (Set(ref _busy, value)) CommandManager.InvalidateRequerySuggested(); }
+        private set
+        {
+            if (Set(ref _busy, value))
+            {
+                OnPropertyChanged(nameof(ActionText));
+                CommandManager.InvalidateRequerySuggested();
+            }
+        }
     }
 
     public async Task CheckAsync()
     {
-        if (_checking || _busy)
+        if (_checking || _busy || _stopChecks.IsCancellationRequested)
             return;
         _checking = true;
+        OnPropertyChanged(nameof(ActionText));
         CommandManager.InvalidateRequerySuggested();
         Status = "Procurando atualizações…";
         try
         {
-            UpdateCheckResult result = await UpdateService.CheckAsync(_stopChecks.Token);
+            UpdateCheckResult result = await _checkForUpdates(_stopChecks.Token);
             _info = result.Info;
             OnPropertyChanged(nameof(Available));
             OnPropertyChanged(nameof(AvailableText));
+            OnPropertyChanged(nameof(Heading));
             Status = result.Message;
         }
+        catch (OperationCanceledException) when (_stopChecks.IsCancellationRequested) { }
         finally
         {
             _checking = false;
+            OnPropertyChanged(nameof(ActionText));
             CommandManager.InvalidateRequerySuggested();
         }
+    }
+
+    /// <summary>O botão principal consulta o release novamente antes de baixar.</summary>
+    public async Task UpdateAsync()
+    {
+        if (_checking || _busy || _stopChecks.IsCancellationRequested) return;
+        await CheckAsync();
+        if (Available && !_stopChecks.IsCancellationRequested) await InstallAsync();
     }
 
     public void StartPeriodicChecks() => _ = MonitorAsync();
@@ -195,14 +224,14 @@ public sealed class UpdateViewModel : ObservableObject, IDisposable
 
     private async Task InstallAsync()
     {
-        if (_info is null)
+        if (_info is null || _busy || _checking || _stopChecks.IsCancellationRequested)
             return;
         Busy = true;
         Status = "Baixando a atualização…";
         try
         {
             var progress = new Progress<double>(p => Status = $"Baixando a atualização… {p:P0}");
-            bool ok = await UpdateService.DownloadAndRunAsync(_info, progress);
+            bool ok = await _downloadAndRun(_info, progress, _stopChecks.Token);
             if (ok)
             {
                 // Fecha o NexoDesk New para o instalador conseguir substituir os arquivos.
@@ -216,6 +245,7 @@ public sealed class UpdateViewModel : ObservableObject, IDisposable
                 Status = "Não foi possível baixar a atualização. Tente mais tarde.";
             }
         }
+        catch (OperationCanceledException) when (_stopChecks.IsCancellationRequested) { }
         finally
         {
             Busy = false;
@@ -268,6 +298,21 @@ public sealed class SettingsViewModel : ObservableObject
     }
 
     public bool IsAdmin => _state.Config.Role == DeviceRole.Admin;
+    public bool StableTransmission
+    {
+        get => TransmissionModes.Effective(_state.Config.Remote.TransmissionMode) == TransmissionMode.Stable;
+        set
+        {
+            if (!value) return;
+            _state.Update(c => c.Remote.TransmissionMode = TransmissionMode.Stable);
+            OnPropertyChanged();
+        }
+    }
+    public bool ExperimentalTransmission => TransmissionModes.Effective(_state.Config.Remote.TransmissionMode) == TransmissionMode.Experimental;
+    public bool ExperimentalTransmissionAvailable => TransmissionModes.IsAvailable(TransmissionMode.Experimental);
+    public string TransmissionHint => IsAdmin
+        ? "A transmissão é definida nas configurações do PC REMOTO. O modo estável continua sendo usado."
+        : "Estável mantém a transmissão atual sem perda. O modo experimental será liberado em uma próxima versão.";
     public string RoleText => IsAdmin ? "ADMIN — acessa os PCs REMOTOS" : "PC REMOTO — pode ser acessado pelo ADMIN";
     public string SwitchRoleText => IsAdmin ? "Mudar para PC REMOTO" : "Mudar para ADMIN";
 

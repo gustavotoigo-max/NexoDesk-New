@@ -8,6 +8,7 @@ using NexoDesk.App.ViewModels;
 using NexoDesk.App.Views;
 using NexoDesk.Shared.Configuration;
 using NexoDesk.Ui;
+using NexoDesk.Ui.Controls;
 
 namespace NexoDesk.Windows.Tests;
 
@@ -25,6 +26,7 @@ public class UiRenderTests
                 var app = new NexoDesk.App.App();
                 stage = "recursos do aplicativo";
                 app.InitializeComponent();
+                app.ShutdownMode = ShutdownMode.OnExplicitShutdown;
                 RenderOptions.ProcessRenderMode = System.Windows.Interop.RenderMode.SoftwareOnly;
                 string output = Path.Combine(WindowsIntegrationTests.FindRoot(), "artifacts", "ui");
                 Directory.CreateDirectory(output);
@@ -53,6 +55,50 @@ public class UiRenderTests
                     encoder.Save(file);
                     Assert.True(file.Length > 10_000);
                 }
+                stage = "configurações";
+                var settings = new SettingsWindow(null!) { DataContext = new PreviewSettings(), Height = 1000, MaxHeight = 1000 };
+                var settingsContent = (FrameworkElement)settings.Content;
+                settings.Content = null;
+                settingsContent.DataContext = new PreviewSettings();
+                var settingsBorder = new Border { Child = settingsContent, Background = (Brush)app.FindResource("Nx.Bg") };
+                System.Windows.Documents.TextElement.SetForeground(settingsBorder, (Brush)app.FindResource("Nx.Text"));
+                settingsBorder.Measure(new Size(640, 1000));
+                settingsBorder.Arrange(new Rect(0, 0, 640, 1000));
+                settingsBorder.UpdateLayout();
+                var settingsImage = new RenderTargetBitmap(640, 1000, 96, 96, PixelFormats.Pbgra32);
+                settingsImage.Render(settingsBorder);
+                var settingsEncoder = new PngBitmapEncoder();
+                settingsEncoder.Frames.Add(BitmapFrame.Create(settingsImage));
+                using (var settingsFile = File.Create(Path.Combine(output, "settings-dark.png"))) settingsEncoder.Save(settingsFile);
+                settings.Close();
+
+                stage = "moldura da tela cheia";
+                var chromeResources = new ResourceDictionary
+                {
+                    Source = new Uri("pack://application:,,,/NexoDesk.Ui;component/Themes/Generic.xaml")
+                };
+                var windowStyle = (Style)chromeResources[typeof(NxWindow)];
+                var template = (ControlTemplate)windowStyle.Setters.OfType<Setter>().Single(s => s.Property == Control.TemplateProperty).Value;
+                foreach (bool fullScreen in new[] { false, true })
+                {
+                    var preview = new NxWindow
+                    {
+                        Title = "PC de testes",
+                        IsFullScreen = fullScreen,
+                        Background = (Brush)app.FindResource("Nx.Bg"),
+                        Content = new Border { Background = Brushes.DarkSlateBlue }
+                    };
+                    var visual = (Border)template.LoadContent();
+                    // TemplateBinding/RelativeSource resolvem no controle real ao aplicar Template.
+                    preview.Template = template;
+                    preview.ApplyTemplate();
+                    var titleRow = (RowDefinition)template.FindName("CaptionRow", preview);
+                    var footer = (Border)template.FindName("Footer", preview);
+                    Assert.Equal(fullScreen ? 0 : 36, titleRow.Height.Value);
+                    Assert.Equal(fullScreen ? Visibility.Collapsed : Visibility.Visible, footer.Visibility);
+                    preview.Close();
+                }
+
                 stage = "encerramento";
                 app.Shutdown();
             }
@@ -62,7 +108,32 @@ public class UiRenderTests
         thread.SetApartmentState(ApartmentState.STA);
         thread.Start();
         Assert.True(thread.Join(TimeSpan.FromSeconds(30)), $"Renderização não terminou: {stage}.");
-        if (failure is not null) throw failure;
+        if (failure is not null) throw new InvalidOperationException($"Falha em {stage}.", failure);
+    }
+
+    public sealed class PreviewSettings
+    {
+        public string DeviceName { get; set; } = "PC de testes";
+        public string RoleText => "PC REMOTO — pode ser acessado pelo ADMIN";
+        public string SwitchRoleText => "Mudar para ADMIN";
+        public bool StableTransmission { get; set; } = true;
+        public bool ExperimentalTransmission => false;
+        public bool ExperimentalTransmissionAvailable => false;
+        public string TransmissionHint => "Estável mantém a transmissão atual sem perda. O modo experimental será liberado em uma próxima versão.";
+        public bool ThemeAuto => false;
+        public bool ThemeLight => false;
+        public bool ThemeDark => true;
+        public string Fingerprint => "AAAA BBBB CCCC…";
+        public string FullFingerprint => new string('A', 64);
+        public string ValidityText => "válida até 14/10/2027";
+        public string Version => "1.2.0";
+        public PreviewUpdate Update { get; } = new();
+    }
+
+    public sealed class PreviewUpdate
+    {
+        public string Status => "Versão 1.2.0 atualizada.";
+        public bool Available => false;
     }
 
     public sealed class PreviewRemote

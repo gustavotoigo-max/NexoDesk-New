@@ -102,6 +102,8 @@ internal sealed class RemoteWorker
         _state ??= new MachineState();
         _state.Reload();
         RemoteSettings settings = _state.Config.Remote;
+        if (TransmissionModes.Effective(settings.TransmissionMode) != TransmissionMode.Stable)
+            throw new InvalidOperationException("Motor de transmissão indisponível.");
         // Revogação e desligamento da política cortam a sessão já aberta.
         AgentSession? session = _host?.CurrentSession;
         if (session?.Client is { } client && (_state.Find(client.Fingerprint) is null || !settings.UnattendedAccessEnabled))

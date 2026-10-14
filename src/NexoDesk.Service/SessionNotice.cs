@@ -25,14 +25,16 @@ internal static class SessionNotice
             if (!interfaceRunning)
             {
                 string title = "NexoDesk New — acesso remoto ativo";
-                string message = $"ADMIN {session.ClientName} está acessando este computador.\nClique em Cancelar para encerrar o acesso.";
+                string message = $"ADMIN {session.ClientName} está acessando este computador.\nOK fecha este aviso. Cancelar encerra o acesso. O aviso fecha automaticamente em 10 segundos.";
                 uint response = await Task.Run(() =>
                 {
                     WTSSendMessage(IntPtr.Zero, (uint)sessionId, title, title.Length * 2, message, message.Length * 2,
-                        0x00000001 | 0x00000030, 30, out uint result, true);
+                        0x00000001 | 0x00000030, 10, out uint result, true);
                     return result;
                 }).ConfigureAwait(false);
-                if (response == 2) { session.End(EndReason.LocalUserEnded); return; }
+                if (response == 2) session.End(EndReason.LocalUserEnded);
+                // Um aviso por sessão: fechar ou expirar não deve fazê-lo reaparecer.
+                return;
             }
             await Task.Delay(TimeSpan.FromSeconds(3)).ConfigureAwait(false);
         }

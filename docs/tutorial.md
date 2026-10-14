@@ -33,6 +33,15 @@ Firewall limita o perfil Privado e a sub-rede local. São aceitos IPv4 privados 
 
 Trocar a senha corta a sessão existente. Após recusa, a senha salva é limpa e a próxima tentativa pede a nova senha. Trocar de rede muda o endereço: refaça a inclusão pelo código do novo endereço.
 
+## Exibição da tela
+
+- **100%** preserva um pixel remoto por pixel local; imagens maiores exigem rolagem.
+- Desmarcar **100%** ajusta a imagem à janela, com redução quando necessário.
+- **Tela cheia**, no rodapé da sessão, usa o monitor atual sem mudar a resolução do PC REMOTO.
+- **Sair da tela cheia** ou **Ctrl+Alt+F11** restaura a janela; esse atalho é tratado localmente. F11 sozinho continua disponível no remoto.
+- Entrar/sair mantém a escolha de 100%. Alt+Tab continua disponível para trocar de aplicativo no ADMIN.
+- Para nitidez em janela e preservação da tela física, consulte a [pesquisa de resolução](pesquisa-resolucao.md). Nenhum driver ou mudança automática de resolução foi aplicado nesta entrega.
+
 ## Encerrar e revogar
 
 - Desconectar no ADMIN encerra a sessão.
@@ -48,4 +57,12 @@ Mantenha a inicialização com Windows habilitada: serviço automático antes do
 
 O agente acompanha Default/Winlogon na sessão física. Valide o fluxo nos PCs reais antes de depender dele. Ctrl+Alt+Del não é sintetizado; se uma política exige essa sequência, o login precisa de validação específica.
 
-A faixa de acesso permanece enquanto a interface está aberta. Sem interface numa sessão de usuário, o Windows apresenta aviso com **Cancelar** para encerrar. Esses fluxos de serviço ainda aguardam teste real.
+O aviso de acesso aparece por dez segundos. **Fechar aviso** apenas fecha a faixa; **Encerrar acesso** encerra a conexão. Depois, janela remota e bandeja continuam indicando a sessão. Sem interface, o Windows apresenta um aviso de dez segundos: **OK** fecha e **Cancelar** encerra. O fluxo sem interface ainda exige teste real.
+
+## Atualizar e preparar testes de transmissão
+
+- A consulta aos releases estáveis do GitHub ocorre ao abrir e a cada quatro horas.
+- Na janela principal, **Atualizar** consulta novamente e, havendo uma versão nova verificável, baixa e inicia a instalação. As conexões são encerradas durante a atualização.
+- Em **Configurações > Transmissão de tela**, **Estável — atual, sem perda** preserva o motor existente.
+- **Experimental — em preparação** permanece indisponível até a implementação do novo motor. A transmissão será escolhida no PC REMOTO.
+- O instalador local 1.2.1 permite testar esta entrega. O release público 1.1.0 continua disponível enquanto a nova versão não for publicada.

@@ -8,12 +8,14 @@
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance Type=vm:SettingsViewModel}"
              Title="Configurações"
-             Width="640" SizeToContent="Height"
+             Width="640" Height="760" MinHeight="480"
+             MaxHeight="{Binding Source={x:Static SystemParameters.WorkArea}, Path=Height}"
              ResizeMode="NoResize"
              CanMinimize="False" CanMaximize="False" ShowFooter="False"
              ShowInTaskbar="False"
              WindowStartupLocation="CenterOwner">
 
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
     <StackPanel Margin="28,22,28,22">
 
         <!-- Este computador -->
@@ -46,6 +48,19 @@
                     <TextBlock Text="{Binding RoleText}" FontWeight="SemiBold" VerticalAlignment="Center" TextWrapping="Wrap" />
                     <Button Grid.Column="1" Style="{DynamicResource Nx.Button}" Content="{Binding SwitchRoleText}" Click="OnSwitchRole" Margin="12,0,0,0" />
                 </Grid>
+            </StackPanel>
+        </Border>
+
+        <!-- O seletor preserva o motor atual; o experimental aguarda implementação. -->
+        <Border Style="{DynamicResource Nx.Card}" Margin="0,0,0,14">
+            <StackPanel>
+                <TextBlock Style="{DynamicResource Nx.SectionLabel}" Text="TRANSMISSÃO DE TELA" />
+                <RadioButton Content="Estável — atual, sem perda" GroupName="Transmission" Foreground="{DynamicResource Nx.Text}"
+                             IsChecked="{Binding StableTransmission}" Margin="0,0,0,8" />
+                <RadioButton Content="Experimental — em preparação" GroupName="Transmission" Foreground="{DynamicResource Nx.TextMuted}"
+                             IsChecked="{Binding ExperimentalTransmission, Mode=OneWay}"
+                             IsEnabled="{Binding ExperimentalTransmissionAvailable}" />
+                <TextBlock Style="{DynamicResource Nx.Hint}" Text="{Binding TransmissionHint}" TextWrapping="Wrap" />
             </StackPanel>
         </Border>
 
@@ -124,4 +139,5 @@
             <Button Style="{DynamicResource Nx.Button.Primary}" Content="Fechar" IsCancel="True" IsDefault="True" HorizontalAlignment="Right" Click="OnClose" />
         </Grid>
     </StackPanel>
+    </ScrollViewer>
 </ui:NxWindow>

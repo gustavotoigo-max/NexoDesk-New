@@ -43,7 +43,9 @@ public sealed class UpdateService
             if (release?.TagName is null || release.Draft || release.Prerelease ||
                 !Version.TryParse(release.TagName.TrimStart('v', 'V'), out Version? latest))
                 return new(UpdateCheckState.Failed, null, "A publicação não contém uma versão válida.");
-            if (latest <= current) return new(UpdateCheckState.UpToDate, null, $"Versão {current} atualizada.");
+            if (latest == current) return new(UpdateCheckState.UpToDate, null, $"Versão {current} atualizada.");
+            if (latest < current) return new(UpdateCheckState.UpToDate, null,
+                $"Versão instalada: {current}. Último release publicado: {latest}.");
             GitHubAsset? setup = release.Assets?.FirstOrDefault(a =>
                 a.Name == $"NexoDesk-New-Setup-{latest}.exe" && a.Digest?.StartsWith("sha256:", StringComparison.Ordinal) == true);
             if (setup?.BrowserDownloadUrl is null || setup.Digest is null)

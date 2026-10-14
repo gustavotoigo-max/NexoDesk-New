@@ -12,7 +12,7 @@ Binários instalados em Program Files\NexoDesk New. Pipe local autentica process
 
 Firewall Tailscale restringe o executável do agente, TCP 47115 e faixas Tailscale. Firewall local restringe mesma porta/programa, LocalSubnet e perfil Privado. Listener não usa wildcard. Há uma sessão por remoto, limite de negociações/tentativas, timeouts e validação antes de alocar.
 
-Logs incluem horário UTC, identidade e resultado; nunca tela, teclas ou senha. Interface mostra faixa persistente e permite corte pela bandeja. Sem interface, há aviso Windows com opção de encerramento.
+Logs incluem horário UTC, identidade e resultado; nunca tela, teclas ou senha. O aviso inicial aparece por dez segundos e pode ser fechado sem encerrar a sessão. Janela remota e bandeja continuam indicando acesso ativo e permitem encerrá-lo. Sem interface, há um aviso Windows de dez segundos, com OK para fechar e Cancelar para encerrar.
 
 ## Recuperação e atualizações
 

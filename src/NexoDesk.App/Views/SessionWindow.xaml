@@ -34,9 +34,13 @@
     </ui:NxWindow.FooterContent>
 
     <ui:NxWindow.FooterRightContent>
-        <TextBlock>
-            <Run Text="Modo:" /> <Run Text="{Binding ModeText, Mode=OneWay}" Foreground="{DynamicResource Nx.OnNavy}" />
-        </TextBlock>
+        <StackPanel Orientation="Horizontal">
+            <TextBlock VerticalAlignment="Center">
+                <Run Text="Modo:" /> <Run Text="{Binding ModeText, Mode=OneWay}" Foreground="{DynamicResource Nx.OnNavy}" />
+            </TextBlock>
+            <Button Style="{DynamicResource Nx.FooterLink}" Content="Tela cheia" Margin="14,0,0,0"
+                    Click="OnToggleFullScreen" ToolTip="Tela cheia neste monitor (Ctrl+Alt+F11). O ajuste 100% permanece como está." />
+        </StackPanel>
     </ui:NxWindow.FooterRightContent>
 
     <Grid Background="#05070C" ClipToBounds="True">
@@ -45,6 +49,13 @@
                       HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" ScrollChanged="OnVideoScroll">
             <Image x:Name="RemoteImage" Source="{Binding Frame}" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality" SnapsToDevicePixels="True" UseLayoutRounding="True" Focusable="True" />
         </ScrollViewer>
+
+        <!-- Saída sempre acessível quando a moldura normal está oculta. -->
+        <Border Panel.ZIndex="10" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="12"
+                Visibility="{Binding IsFullScreen, RelativeSource={RelativeSource AncestorType={x:Type ui:NxWindow}}, Converter={StaticResource BoolToVisibility}}">
+            <Button Style="{DynamicResource Nx.Button.Navy}" Content="Sair da tela cheia"
+                    Click="OnToggleFullScreen" ToolTip="Ctrl+Alt+F11. A sessão continua aberta." />
+        </Border>
 
         <!-- Ponteiro do PC REMOTO: desenhado por cima da imagem, posicionado no código. -->
         <Canvas x:Name="CursorLayer" IsHitTestVisible="False">

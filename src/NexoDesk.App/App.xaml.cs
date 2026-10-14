@@ -174,8 +174,13 @@ public partial class App : Application
     private void OnSessionActivated(NexoDesk.Desktop.ServiceStatus session)
     {
         _indicator?.CloseForSessionEnd();
-        _indicator = new SessionIndicatorWindow(() => _remote?.EndSession(), session);
-        _indicator.Show();
+        var indicator = new SessionIndicatorWindow(() => _remote?.EndSession(), session);
+        _indicator = indicator;
+        indicator.Closed += (_, _) =>
+        {
+            if (ReferenceEquals(_indicator, indicator)) _indicator = null;
+        };
+        indicator.Show();
     }
 
     private void OnSessionFinished()

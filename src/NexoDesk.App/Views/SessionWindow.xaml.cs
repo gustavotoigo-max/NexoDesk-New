@@ -2,6 +2,9 @@ using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Interop;
+using System.Windows.Shell;
+using System.Runtime.InteropServices;
 using NexoDesk.App.ViewModels;
 using NexoDesk.Shared.Messages;
 using NexoDesk.Ui.Controls;
@@ -14,6 +17,15 @@ public partial class SessionWindow : NxWindow
     private readonly HashSet<Key> _keysDown = [];
     private readonly HashSet<PointerButton> _buttonsDown = [];
     private double _lastX, _lastY;
+    private WindowState _previousState;
+    private WindowStyle _previousStyle;
+    private ResizeMode _previousResizeMode;
+    private Rect _previousBounds;
+    private WindowChrome? _previousChrome;
+    private bool _fullScreenShortcutDown;
+    private bool _positioningFullScreen;
+    private WindowPlacement _previousPlacement;
+    private bool _hasPreviousPlacement;
 
     public SessionWindow(SessionViewModel vm)
     {
@@ -36,6 +48,7 @@ public partial class SessionWindow : NxWindow
         // Ponteiro do PC REMOTO: reposiciona quando ele se move ou a área da imagem muda.
         _vm.CursorChanged += () => { ApplyScale(); UpdateCursorOverlay(); };
         RemoteImage.SizeChanged += (_, _) => UpdateCursorOverlay();
+        SizeChanged += (_, _) => { ApplyScale(); UpdateCursorOverlay(); };
     }
 
     /// <summary>Coloca o ponteiro remoto sobre a imagem usando a mesma conta de letterbox do controle.</summary>
@@ -99,6 +112,123 @@ public partial class SessionWindow : NxWindow
         return true;
     }
 
+    private void OnToggleFullScreen(object sender, RoutedEventArgs e) => ToggleFullScreen();
+
+    /// <summary>Tela cheia local; não altera resolução, escala nem sessão do PC REMOTO.</summary>
+    private void ToggleFullScreen()
+    {
+        ReleaseHeldInputs();
+        if (IsFullScreen)
+        {
+            RestoreWindowMode();
+        }
+        else
+        {
+            IntPtr handle = new WindowInteropHelper(this).Handle;
+            IntPtr targetMonitor = MonitorFromWindow(handle, 2);
+            _previousPlacement = new WindowPlacement { Size = Marshal.SizeOf<WindowPlacement>() };
+            _hasPreviousPlacement = GetWindowPlacement(handle, ref _previousPlacement);
+            _previousState = WindowState;
+            _previousStyle = WindowStyle;
+            _previousResizeMode = ResizeMode;
+            _previousBounds = WindowState == WindowState.Normal ? new Rect(Left, Top, Width, Height) : RestoreBounds;
+            _previousChrome = WindowChrome.GetWindowChrome(this);
+            WindowState = WindowState.Normal;
+            IsFullScreen = true;
+            WindowChrome.SetWindowChrome(this, null);
+            WindowStyle = WindowStyle.None;
+            ResizeMode = ResizeMode.NoResize;
+            if (!PositionFullScreen(targetMonitor))
+            {
+                RestoreWindowMode();
+                System.Windows.MessageBox.Show(this, "Não foi possível abrir tela cheia neste monitor.", "NexoDesk New",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+        }
+        ApplyScale();
+        UpdateCursorOverlay();
+        RemoteImage.Focus();
+    }
+
+    private void RestoreWindowMode()
+    {
+        IsFullScreen = false;
+        WindowStyle = _previousStyle;
+        ResizeMode = _previousResizeMode;
+        WindowChrome.SetWindowChrome(this, _previousChrome);
+        // A posição nativa também preserva o monitor de uma janela originalmente maximizada.
+        if (_hasPreviousPlacement && SetWindowPlacement(new WindowInteropHelper(this).Handle, ref _previousPlacement))
+        {
+            WindowState = _previousState;
+            return;
+        }
+        if (!_previousBounds.IsEmpty)
+        {
+            Left = _previousBounds.Left;
+            Top = _previousBounds.Top;
+            Width = _previousBounds.Width;
+            Height = _previousBounds.Height;
+        }
+        WindowState = _previousState;
+    }
+
+    private bool PositionFullScreen(IntPtr targetMonitor = default)
+    {
+        if (_positioningFullScreen) return true;
+        IntPtr handle = new WindowInteropHelper(this).Handle;
+        if (handle == IntPtr.Zero) return false;
+        var info = new MonitorInfo { Size = Marshal.SizeOf<MonitorInfo>() };
+        if (!GetMonitorInfo(targetMonitor != IntPtr.Zero ? targetMonitor : MonitorFromWindow(handle, 2), ref info)) return false;
+        _positioningFullScreen = true;
+        try
+        {
+            // Coordenadas físicas do monitor: evita converter incorretamente DPI misto/monitores à esquerda.
+            // Não torna a janela Topmost: Alt+Tab continua permitindo usar as ferramentas locais.
+            return SetWindowPos(handle, IntPtr.Zero, info.Monitor.Left, info.Monitor.Top,
+                info.Monitor.Right - info.Monitor.Left, info.Monitor.Bottom - info.Monitor.Top, 0x0004 | 0x0010 | 0x0020);
+        }
+        finally { _positioningFullScreen = false; }
+    }
+
+    protected override void OnDpiChanged(DpiScale oldDpi, DpiScale newDpi)
+    {
+        base.OnDpiChanged(oldDpi, newDpi);
+        if (_vm is null) return;
+        if (IsFullScreen) PositionFullScreen();
+        ApplyScale();
+        UpdateCursorOverlay();
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct NativeRect { public int Left, Top, Right, Bottom; }
+    [StructLayout(LayoutKind.Sequential)]
+    private struct NativePoint { public int X, Y; }
+    [StructLayout(LayoutKind.Sequential)]
+    private struct WindowPlacement
+    {
+        public int Size;
+        public uint Flags, ShowCommand;
+        public NativePoint MinPosition, MaxPosition;
+        public NativeRect NormalPosition;
+    }
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MonitorInfo { public int Size; public NativeRect Monitor, Work; public uint Flags; }
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetWindowPlacement(IntPtr window, ref WindowPlacement placement);
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool SetWindowPlacement(IntPtr window, ref WindowPlacement placement);
+    [DllImport("user32.dll")]
+    private static extern IntPtr MonitorFromWindow(IntPtr window, uint flags);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetMonitorInfo(IntPtr monitor, ref MonitorInfo info);
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool SetWindowPos(IntPtr window, IntPtr after, int x, int y, int width, int height, uint flags);
+
     private void OnToggleScale(object sender, RoutedEventArgs e) { ApplyScale(); UpdateCursorOverlay(); }
     private void OnVideoScroll(object sender, ScrollChangedEventArgs e) { if (_vm is not null) UpdateCursorOverlay(); }
     private void ApplyScale()
@@ -160,12 +290,27 @@ public partial class SessionWindow : NxWindow
 
     private void OnKeyDown(object sender, KeyEventArgs e)
     {
+        Key key = e.Key == Key.System ? e.SystemKey : e.Key;
+        if (key == Key.F11 && (Keyboard.Modifiers & (ModifierKeys.Control | ModifierKeys.Alt)) == (ModifierKeys.Control | ModifierKeys.Alt))
+        {
+            if (!e.IsRepeat) ToggleFullScreen();
+            _fullScreenShortcutDown = true;
+            e.Handled = true;
+            return;
+        }
         if (SendKey(e, KeyAction.Down))
             e.Handled = true;
     }
 
     private void OnKeyUp(object sender, KeyEventArgs e)
     {
+        Key key = e.Key == Key.System ? e.SystemKey : e.Key;
+        if (key == Key.F11 && _fullScreenShortcutDown)
+        {
+            _fullScreenShortcutDown = false;
+            e.Handled = true;
+            return;
+        }
         if (SendKey(e, KeyAction.Up))
             e.Handled = true;
     }

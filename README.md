@@ -8,16 +8,20 @@ Acesso remoto privado para até cinco PCs Windows x64. Um aplicativo e um instal
 - Pareamento por código temporário, certificados individuais e TLS mútuo.
 - Senha exigida a cada conexão; salva com proteção do Windows no ADMIN.
 - Monitor principal, cursor remoto, mouse, teclado, desconexão e reconexão.
+- Aviso de acesso por dez segundos, com botão para fechar sem desconectar.
 - Blocos de tela sem perda, fila de imagem limitada e visualização a 100%.
-- Atualização automática consultada ao abrir/a cada quatro horas, com encerramento da versão antiga.
+- Atualizações consultadas ao abrir/a cada quatro horas e pelo botão Atualizar na janela principal, com encerramento da versão antiga.
+- Modo estável de transmissão preservado; seletor experimental preparado para uma futura versão.
 - Serviço SYSTEM com agente na sessão física, destinado ao acesso antes do login e a aplicativos elevados.
 - Tema claro/escuro, bandeja, indicador de acesso e logs sem imagens, senhas ou teclas.
 
 **Estado:** implementação e instalador disponíveis. Compilação e testes locais descritos em [validação](docs/validacao.md). Login/UAC, reinício e operação entre dois PCs ainda exigem validação real. Instalador sem assinatura Authenticode.
 
+**Versão 1.2.1**, com tela cheia opcional na sessão (Ctrl+Alt+F11). Instalador e SHA-256 disponíveis no [release](https://github.com/gustavotoigo-max/NexoDesk-New/releases/tag/v1.2.1). [Plano da transmissão experimental](docs/plano-transmissao.md).
+
 ## Instalar
 
-Baixe o [instalador 1.1.0](https://github.com/gustavotoigo-max/NexoDesk-New/releases/download/v1.1.0/NexoDesk-New-Setup-1.1.0.exe) e execute nos dois computadores. A cópia local fica em **artifacts/NexoDesk-New-Setup-1.1.0.exe**. O instalador inclui o runtime .NET; não é necessário baixá-lo para executar.
+Baixe o [instalador 1.2.1](https://github.com/gustavotoigo-max/NexoDesk-New/releases/download/v1.2.1/NexoDesk-New-Setup-1.2.1.exe) e execute nos dois computadores. A cópia local fica em **artifacts/NexoDesk-New-Setup-1.2.1.exe**. A versão 1.1.0 permanece no seu release anterior. O instalador inclui o runtime .NET; não é necessário baixá-lo para executar.
 
 1. No remoto, escolha **PC REMOTO**.
 2. Escolha **Tailscale (internet)** ou **Rede local**, selecione o IP quando necessário e aplique.

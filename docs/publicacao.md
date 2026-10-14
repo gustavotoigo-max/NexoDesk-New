@@ -17,7 +17,9 @@ Publicação manual do instalador local, após enviar o commit:
 
 ## Atualização no aplicativo
 
-A consulta ocorre ao abrir, a cada quatro horas e pelo botão em Configurações > Atualização. Falha de internet não é tratada como prova de versão atual.
+A consulta ocorre ao abrir, a cada quatro horas e pelo botão **Verificar** em Configurações > Atualização. O botão **Atualizar** permanece na janela principal e consulta novamente antes de baixar/instalar uma versão mais recente. O resultado aparece na própria janela; uma versão local mais nova informa qual é o último release publicado. Falha de internet não é tratada como prova de versão atual.
+
+A instalação não é automática ao detectar uma versão: depende do clique em **Atualizar** ou **Baixar e instalar**. Drafts e pré-releases são recusados. O instalador 1.1.0 é preservado no release anterior e em artifacts. A 1.2.0 foi intermediária local; a publicação 1.2.1 inclui todas as suas melhorias, com instalador e SHA-256 próprios.
 
 Ao clicar em atualizar, o aplicativo baixa e confere o instalador. Inicia a instalação elevada com PID antigo, sai sem pedir nova confirmação da sessão e encerra conexões. O instalador espera a saída; se houver travamento, confere o caminho e termina somente a interface dessa instalação. Também encontra a interface antiga quando o pedido veio da 1.0, que não envia PID. Depois substitui os arquivos, reinicia o serviço e abre a interface nova. O Windows não é reiniciado automaticamente.
 

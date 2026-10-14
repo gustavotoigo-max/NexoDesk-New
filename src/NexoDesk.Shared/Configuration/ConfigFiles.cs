@@ -37,6 +37,16 @@ public sealed record PairedComputer
 
 public enum NetworkMode { Tailscale, LocalNetwork }
 
+/// <summary>O motor experimental só será habilitado após sua implementação e validação.</summary>
+public enum TransmissionMode { Stable, Experimental }
+
+public static class TransmissionModes
+{
+    public static bool IsAvailable(TransmissionMode mode) => mode == TransmissionMode.Stable;
+    public static TransmissionMode Effective(TransmissionMode requested) =>
+        IsAvailable(requested) ? requested : TransmissionMode.Stable;
+}
+
 public sealed record RemoteSettings
 {
     public int Port { get; set; } = ProtocolConstants.DefaultPort;
@@ -49,6 +59,8 @@ public sealed record RemoteSettings
 
     public int ConsentTimeoutSeconds { get; set; } = 30;
     public bool StartWithWindows { get; set; } = true;
+    /// <summary>Ausente nas configurações antigas: mantém a transmissão estável.</summary>
+    public TransmissionMode TransmissionMode { get; set; } = TransmissionMode.Stable;
     public int MaxFps { get; set; } = 30;
     public int JpegQuality { get; set; } = 90;
 
@@ -104,6 +116,8 @@ public sealed record AppConfig
             problems.Add("Porta do PC REMOTO deve estar entre 1024 e 65535.");
         if (!Enum.IsDefined(Remote.NetworkMode))
             problems.Add("Modo de rede inválido.");
+        if (!Enum.IsDefined(Remote.TransmissionMode))
+            problems.Add("Modo de transmissão inválido.");
         if (Remote.MaxFps is < 1 or > 30 || Remote.JpegQuality is < 10 or > 95)
             problems.Add("Qualidade ou FPS fora do limite.");
         if (Remote.ConsentTimeoutSeconds is < 5 or > 300)

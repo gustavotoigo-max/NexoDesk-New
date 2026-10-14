@@ -1,17 +1,15 @@
-using System.ComponentModel;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Threading;
 using NexoDesk.Shared.Messages;
-using NexoDesk.Shared.Session;
 
 namespace NexoDesk.App.Views;
 
+/// <summary>Aviso inicial de dez segundos; fechá-lo não encerra o acesso.</summary>
 public partial class SessionIndicatorWindow : Window
 {
     private readonly Action _endSession;
-
-    private bool _allowClose;
+    private readonly DispatcherTimer _dismissTimer = new() { Interval = TimeSpan.FromSeconds(10) };
 
     public SessionIndicatorWindow(Action endSession, NexoDesk.Desktop.ServiceStatus session)
     {
@@ -20,9 +18,10 @@ public partial class SessionIndicatorWindow : Window
         AdminRun.Text = "ADMIN " + session.ClientName;
         ModeRun.Text = session.Mode == SessionMode.Control ? "controlando" : "visualizando";
 
-        Loaded += (_, _) => PlaceAtTopCenter();
+        _dismissTimer.Tick += (_, _) => Close();
+        Loaded += (_, _) => { PlaceAtTopCenter(); _dismissTimer.Start(); };
+        Closed += (_, _) => _dismissTimer.Stop();
         SizeChanged += (_, _) => PlaceAtTopCenter();
-        // Pode ser arrastada na horizontal se cobrir algo importante.
         MouseLeftButtonDown += (_, e) =>
         {
             if (e.ButtonState == MouseButtonState.Pressed && e.Source is not System.Windows.Controls.Button)
@@ -30,23 +29,8 @@ public partial class SessionIndicatorWindow : Window
         };
     }
 
-    /// <summary>Fecha a faixa quando a sessão termina.</summary>
-    public void CloseForSessionEnd()
-    {
-        _allowClose = true;
-
-        Close();
-    }
-
-    private void OnHide(object sender, RoutedEventArgs e) => Hide();
-
-    protected override void OnClosing(CancelEventArgs e)
-    {
-        base.OnClosing(e);
-        // Alt+F4 não esconde o aviso: só encerrar o acesso remove a faixa.
-        if (!_allowClose)
-            e.Cancel = true;
-    }
+    public void CloseForSessionEnd() => Close();
+    private void OnHide(object sender, RoutedEventArgs e) => Close();
 
     private void OnEnd(object sender, RoutedEventArgs e)
     {

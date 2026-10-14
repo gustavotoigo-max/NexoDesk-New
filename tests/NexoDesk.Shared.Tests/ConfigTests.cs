@@ -29,6 +29,7 @@ public class ConfigTests
         Assert.False(cfg.Remote.UnattendedAccessEnabled);
         Assert.Equal("auto", cfg.Remote.ListenAddress);
         Assert.Equal(47115, cfg.Remote.Port);
+        Assert.Equal(TransmissionMode.Stable, cfg.Remote.TransmissionMode);
     }
 
     [Theory]
@@ -83,6 +84,21 @@ public class ConfigTests
         Assert.Equal(47115, partial.Remote.Port);
         Assert.Equal(30, partial.Remote.ConsentTimeoutSeconds);
         Assert.True(partial.Remote.StartWithWindows);
+    }
+
+    [Fact]
+    public void OldConfigKeepsStableEngineAndReservedModeFallsBack()
+    {
+        AppConfig old = ConfigStore.Parse("{\"remote\":{\"maxFps\":30}}");
+        Assert.Equal(TransmissionMode.Stable, old.Remote.TransmissionMode);
+        AppConfig cfg = Valid();
+        cfg.Remote.TransmissionMode = TransmissionMode.Experimental;
+        AppConfig restored = ConfigStore.Parse(ConfigStore.Serialize(cfg));
+        Assert.Equal(TransmissionMode.Experimental, restored.Remote.TransmissionMode);
+        Assert.Equal(TransmissionMode.Stable, TransmissionModes.Effective(restored.Remote.TransmissionMode));
+        Assert.False(TransmissionModes.IsAvailable(TransmissionMode.Experimental));
+        cfg.Remote.TransmissionMode = (TransmissionMode)99;
+        Assert.Contains(cfg.Validate(), p => p.Contains("transmissão"));
     }
 
     [Fact]

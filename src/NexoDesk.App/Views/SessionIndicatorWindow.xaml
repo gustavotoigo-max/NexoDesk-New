@@ -1,6 +1,6 @@
 <!--
-  Indicador permanente de sessão ativa: faixa azul-marinho no topo da tela, sempre visível,
-  com quem está acessando e o botão "Encerrar acesso". Não pode ser fechada sem encerrar o acesso.
+  Aviso inicial de acesso remoto: desaparece após dez segundos e pode ser fechado.
+  O acesso continua indicado na janela principal e na bandeja.
 -->
 <Window x:Class="NexoDesk.App.Views.SessionIndicatorWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -56,7 +56,7 @@
                     <Run x:Name="ModeRun" Text="" Foreground="{DynamicResource Nx.OnNavyMuted}" />
                 </TextBlock>
                 <Button x:Name="EndButton" Style="{DynamicResource Nx.Button.DangerSolid.Small}" Content="Encerrar acesso" Margin="16,0,8,0" Click="OnEnd" />
-                <Button x:Name="HideButton" Style="{DynamicResource Nx.Button.Navy}" Content="Esconder" Visibility="Collapsed" Click="OnHide" ToolTip="Esconde este aviso. O acesso continua ativo." />
+                <Button x:Name="HideButton" Style="{DynamicResource Nx.Button.Navy}" Content="Fechar aviso" Click="OnHide" ToolTip="Esconde este aviso. O acesso continua ativo." />
             </StackPanel>
             <Rectangle Grid.Row="1" Fill="{DynamicResource Nx.AccentGradient}" RadiusX="1" RadiusY="1" Margin="10,0,10,0" />
         </Grid>

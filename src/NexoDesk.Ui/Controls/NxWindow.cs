@@ -23,6 +23,10 @@ public class NxWindow : Window
     public static readonly DependencyProperty FooterRightContentProperty =
         DependencyProperty.Register(nameof(FooterRightContent), typeof(object), typeof(NxWindow), new PropertyMetadata(null));
 
+    public static readonly DependencyProperty IsFullScreenProperty =
+        DependencyProperty.Register(nameof(IsFullScreen), typeof(bool), typeof(NxWindow),
+            new PropertyMetadata(false, (owner, _) => ((NxWindow)owner).UpdateMaximizedMargin()));
+
     public static readonly DependencyProperty ShowFooterProperty =
         DependencyProperty.Register(nameof(ShowFooter), typeof(bool), typeof(NxWindow), new PropertyMetadata(true));
 
@@ -73,6 +77,13 @@ public class NxWindow : Window
         set => SetValue(FooterRightContentProperty, value);
     }
 
+    /// <summary>Oculta a moldura visual sem afetar as outras janelas do aplicativo.</summary>
+    public bool IsFullScreen
+    {
+        get => (bool)GetValue(IsFullScreenProperty);
+        set => SetValue(IsFullScreenProperty, value);
+    }
+
     public bool ShowFooter
     {
         get => (bool)GetValue(ShowFooterProperty);
@@ -109,7 +120,12 @@ public class NxWindow : Window
         if (GetTemplateChild("PART_Root") is not Border root)
             return;
 
-        if (WindowState == WindowState.Maximized)
+        if (IsFullScreen)
+        {
+            root.Margin = new Thickness(0);
+            root.BorderThickness = new Thickness(0);
+        }
+        else if (WindowState == WindowState.Maximized)
         {
             Thickness t = SystemParameters.WindowResizeBorderThickness;
             Thickness pad = WindowChrome.GetWindowChrome(this)?.ResizeBorderThickness ?? new Thickness(0);

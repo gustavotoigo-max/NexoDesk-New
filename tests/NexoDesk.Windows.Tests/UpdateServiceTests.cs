@@ -58,6 +58,28 @@ public class UpdateServiceTests
     }
 
     [Fact]
+    public async Task LocalTestVersionShowsOlderPublishedReleaseWithoutOfferingDowngrade()
+    {
+        using var http = new HttpClient(new ReplyHandler(HttpStatusCode.OK, Release("1.1.0", "sha256:" + new string('a', 64))));
+        UpdateCheckResult result = await UpdateService.CheckAsync(http, new(1, 2, 0));
+        Assert.Equal(UpdateCheckState.UpToDate, result.State);
+        Assert.Null(result.Info);
+        Assert.Contains("Último release publicado: 1.1.0", result.Message);
+    }
+
+    [Theory]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public async Task DraftAndPrereleaseAreNotInstallable(bool draft, bool prerelease)
+    {
+        string json = Release("1.3.0", "sha256:" + new string('a', 64))
+            .Replace("\"draft\":false", $"\"draft\":{draft.ToString().ToLowerInvariant()}")
+            .Replace("\"prerelease\":false", $"\"prerelease\":{prerelease.ToString().ToLowerInvariant()}");
+        using var http = new HttpClient(new ReplyHandler(HttpStatusCode.OK, json));
+        Assert.Equal(UpdateCheckState.Failed, (await UpdateService.CheckAsync(http, new(1, 2, 0))).State);
+    }
+
+    [Fact]
     public void InstallerReceivesOldProcessIdAndDoesNotRestartWindows()
     {
         string[] args=UpdateService.InstallerArguments(1234);
