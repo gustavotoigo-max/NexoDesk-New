@@ -13,6 +13,7 @@ public partial class SettingsWindow : NxWindow
         InitializeComponent();
         _vm = vm;
         DataContext = vm;
+        Closed += (_, _) => _vm?.ImageFit.Flush();
     }
 
     private void OnClose(object sender, RoutedEventArgs e) => Close();

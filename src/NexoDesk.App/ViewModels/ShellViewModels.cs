@@ -315,16 +315,7 @@ public sealed class SettingsViewModel : ObservableObject
             OnPropertyChanged();
         }
     }
-    public bool EnhancedWindowFit
-    {
-        get => _state.Config.Admin.EnhancedWindowFit;
-        set
-        {
-            if (value == EnhancedWindowFit) return;
-            _state.Update(c => c.Admin.EnhancedWindowFit = value);
-            OnPropertyChanged();
-        }
-    }
+    public ImageFitViewModel ImageFit => _state.ImageFit;
     public bool StableTransmission
     {
         get => TransmissionModes.Effective(_state.Config.Remote.TransmissionMode) == TransmissionMode.Stable;

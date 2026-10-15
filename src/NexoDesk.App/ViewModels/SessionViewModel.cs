@@ -236,11 +236,7 @@ public sealed class SessionViewModel : ObservableObject
 
     public event Action? CloseRequested;
     public event Action<DesktopUpdate, IReadOnlyList<byte[]>>? DesktopUpdated;
-    public bool EnhancedWindowFit
-    {
-        get => _main.EnhancedWindowFit;
-        set { _main.EnhancedWindowFit = value; OnPropertyChanged(); }
-    }
+    public ImageFitViewModel ImageFit => _main.ImageFit;
     public void LogImageFallback(string message) => _main.AddLog(LogLevel.Warn, message);
 
     public ImageSource? Frame

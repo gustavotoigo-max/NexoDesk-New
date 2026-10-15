@@ -6,6 +6,8 @@ using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using NexoDesk.App.Services;
+using NexoDesk.Shared.Imaging;
+using NexoDesk.Shared.Streaming;
 
 internal static class Program
 {
@@ -14,19 +16,40 @@ internal static class Program
     {
         string output = Path.GetFullPath(args.Length > 0 ? args[0] : "artifacts/scale-comparison");
         Directory.CreateDirectory(output);
-        var source = CreateFixture();
+        var source = args.Length > 1 ? LoadSource(args[1]) : CreateFixture();
+        int sourceWidth = source.PixelWidth, sourceHeight = source.PixelHeight;
+        int[] widths = new[] { 0.5, 2.0 / 3, 0.75, 0.9 }.Select(r => Math.Max(1, (int)(sourceWidth * r))).Distinct().ToArray();
+        int[] levels = [0, 20, 35, 50, 65, 80, 100];
+        // Antes dos filtros, verifica reconstrução do transporte sem perda no mesmo quadro.
+        byte[] original = ToPixels(source);
+        var tiles = new DesktopTileEncoder(); var presenter = new DesktopFramePresenter();
+        tiles.Capture(original, sourceWidth, sourceHeight, 0);
+        while (tiles.HasPending)
+        {
+            var update = tiles.Take(0);
+            presenter.Apply(update, update.Blocks.Select(b => b.Decompress()).ToArray());
+        }
+        byte[] decoded = ToPixels(presenter.Bitmap!);
+        var roundtrip = PixelQualityMetrics.Compare(original, decoded, sourceWidth, sourceHeight);
         Save(source, Path.Combine(output, "original.png"));
         var results = new List<object>();
-        foreach (int width in new[] { 960, 1280, 1440 })
+        foreach (int width in widths)
         {
-            int height = width * 1080 / 1920;
+            int height = Math.Max(1, width * sourceHeight / sourceWidth);
             Save(RenderFant(source, width, height), Path.Combine(output, $"{width}-fant.png"));
             using var renderer = new Direct2DScaleRenderer(software: true);
             renderer.UploadFrame(source); renderer.SetOutput(width, height);
             renderer.Render(0);
-            SavePixels(renderer.ReadPixels(), width, height, Path.Combine(output, $"{width}-cubic.png"));
-            renderer.Render();
-            SavePixels(renderer.ReadPixels(), width, height, Path.Combine(output, $"{width}-sharp.png"));
+            byte[] cubic = renderer.ReadPixels();
+            SavePixels(cubic, width, height, Path.Combine(output, $"{width}-cubic.png"));
+            var samples = new List<object>();
+            foreach (int level in levels)
+            {
+                renderer.Render(level / 100f); byte[] pixels = renderer.ReadPixels();
+                SavePixels(pixels, width, height, Path.Combine(output, $"{width}-sharp-{level}.png"));
+                if (level == 35) SavePixels(pixels, width, height, Path.Combine(output, $"{width}-sharp.png"));
+                samples.Add(new { sharpnessPercent = level, versusCubic = PixelQualityMetrics.Compare(cubic, pixels, width, height) });
+            }
             // Este tempo inclui conclusão GPU e leitura de diagnóstico; não é latência de rede ou FPS da sessão.
             var times = new List<double>();
             for (int i = 0; i < 20; i++)
@@ -34,7 +57,7 @@ internal static class Program
                 var watch = Stopwatch.StartNew(); renderer.Render(); _ = renderer.ReadPixels();
                 times.Add(watch.Elapsed.TotalMilliseconds);
             }
-            results.Add(new { width, height, software = true, completedRenderAndReadbackMs = times.Average() });
+            results.Add(new { width, height, software = true, samples, completedRenderAndReadbackMs = times.Average() });
         }
         object hardware;
         try
@@ -43,37 +66,59 @@ internal static class Program
             surface.Renderer.UploadFrame(source);
             bool presented = surface.Present(1280, 720);
             byte[] pixels = surface.Renderer.ReadPixels();
+            surface.Present(1280, 720, 0); byte[] noSharpen = surface.Renderer.ReadPixels();
+            surface.Present(1280, 720, 1); byte[] maxSharpen = surface.Renderer.ReadPixels();
+            bool manualSharpnessChangesPixels = !noSharpen.SequenceEqual(maxSharpen);
             if (!pixels.Where((_, i) => i % 4 != 3).Any(p => p > 0)) throw new InvalidOperationException("Saída compartilhada vazia.");
             var times = new List<double>();
-            byte[] tile = new byte[128 * 128 * 4];
+            int tileWidth = Math.Min(128, sourceWidth), tileHeight = Math.Min(128, sourceHeight);
+            byte[] tile = new byte[tileWidth * tileHeight * 4];
             for (int i = 0; i < 40; i++)
             {
                 tile[0] = (byte)i;
                 var watch = Stopwatch.StartNew();
-                surface.Renderer.UploadBlock(0, 0, 128, 128, tile);
+                surface.Renderer.UploadBlock(0, 0, tileWidth, tileHeight, tile);
                 surface.Present(1280, 720);
                 times.Add(watch.Elapsed.TotalMilliseconds);
             }
-            hardware = new { available = true, presented, changedBlockAndSubmissionMs = times.Average() };
+            hardware = new { available = true, presented, manualSharpnessChangesPixels, changedBlockAndSubmissionMs = times.Average() };
             SavePixels(pixels, 1280, 720, Path.Combine(output, "1280-hardware-shared.png"));
         }
         catch (Exception ex)
         {
             hardware = new { available = false, error = ex.GetType().Name, hresult = $"0x{ex.HResult:X8}" };
         }
-        var report = new { source = "1920x1080, texto/planilha/linhas sintéticos", results, hardware,
-            note = "Medidas locais sintéticas. WARP é CPU; submission não mede conclusão GPU. Não demonstram ganho em todos os textos nem latência entre PCs." };
+        var report = new { source = args.Length > 1 ? "Imagem fornecida localmente" : "Texto/planilha/linhas sintéticos", sourceWidth, sourceHeight,
+            losslessRoundtrip = roundtrip, results, hardware,
+            reference = "Comparações reduzidas usam cúbico sem reforço no mesmo tamanho; SSIM de luminância por blocos 8x8. Maior similaridade ao cúbico não significa melhor legibilidade.",
+            note = "Contraste maior pode vir de contornos artificiais. Overshoot conta pixels além do intervalo de luminância 3x3 da referência com tolerância de 2/255; não é detector definitivo de halos. WARP é CPU; submission não mede conclusão GPU nem latência entre PCs." };
         File.WriteAllText(Path.Combine(output, "comparison.json"), JsonSerializer.Serialize(report, new JsonSerializerOptions { WriteIndented = true }));
         File.WriteAllText(Path.Combine(output, "index.html"), """
-            <!doctype html><html lang="pt-BR"><meta charset="utf-8"><title>Comparação de ajuste da imagem</title>
-            <style>body{font:16px system-ui;background:#20242b;color:#eee;padding:24px}button{padding:10px;margin:4px}img{display:block;max-width:none;margin-top:16px}select{padding:8px}p{max-width:850px}</style>
-            <h1>Ajuste da imagem em janela</h1><p>Compare na escala de 100% do navegador. O bitmap original é o mesmo; resolução remota 1920×1080. Nitidez é visual e depende do texto e do tamanho de redução.</p>
-            <label>Tamanho <select id="size"><option>960</option><option selected>1280</option><option>1440</option></select></label>
-            <button onclick="mode='fant';show()">Anterior (Fant)</button><button onclick="mode='cubic';show()">Cúbico</button><button onclick="mode='sharp';show()">Cúbico + nitidez</button>
-            <p id="label"></p><img id="image" alt="Texto, planilha e linhas para comparar">
-            <script>let mode='sharp';function show(){image.src=size.value+'-'+mode+'.png';label.textContent=size.value+' pixels — '+mode}size.onchange=show;show()</script></html>
-            """);
+            <!doctype html><html lang="pt-BR"><meta charset="utf-8"><title>Comparação de nitidez</title>
+            <style>body{font:16px system-ui;background:#20242b;color:#eee;padding:24px}button,select{padding:8px;margin:4px}img{display:block;max-width:none;margin-top:16px}p{max-width:900px}a{color:#9bf}</style>
+            <h1>Nitidez da imagem em janela</h1><p>Compare com zoom do navegador em 100%. Mesma imagem e mesmo tamanho de saída. O reforço aumenta contraste; excesso pode criar contornos. Nenhum nível é universalmente melhor.</p>
+            <label>Largura <select id="size"></select></label>
+            <label>Reforço <select id="level"><option>0</option><option>20</option><option selected>35</option><option>50</option><option>65</option><option>80</option><option>100</option></select>%</label>
+            <button onclick="mode='fant';show()">Anterior (Fant)</button><button onclick="mode='sharp';show()">GPU / nitidez</button>
+            <p><a href="comparison.json">Métricas e limites da comparação</a> · SSIM relativo ao cúbico sem reforço não é uma nota de conforto visual.</p>
+            <p id="label"></p><img id="image" alt="Imagem local para comparar texto, planilha e linhas">
+            <script>const widths=__WIDTHS__;let mode='sharp';const size=document.getElementById('size'),level=document.getElementById('level'),image=document.getElementById('image'),label=document.getElementById('label');
+            widths.forEach(w=>size.add(new Option(w,w)));size.value=widths[Math.min(1,widths.length-1)];
+            function show(){image.src=size.value+'-'+(mode==='fant'?'fant':'sharp-'+level.value)+'.png';label.textContent=size.value+' pixels — '+(mode==='fant'?'Anterior (Fant)':'Nitidez '+level.value+'%')}size.onchange=level.onchange=show;show()</script></html>
+            """.Replace("__WIDTHS__", JsonSerializer.Serialize(widths)));
         Console.WriteLine(JsonSerializer.Serialize(report, new JsonSerializerOptions { WriteIndented = true }));
+    }
+
+    private static BitmapSource LoadSource(string path)
+    {
+        using var file = File.OpenRead(Path.GetFullPath(path));
+        var image = BitmapDecoder.Create(file, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.OnLoad).Frames[0];
+        image.Freeze(); return image;
+    }
+    private static byte[] ToPixels(BitmapSource source)
+    {
+        BitmapSource bgr = source.Format == PixelFormats.Bgr32 ? source : new FormatConvertedBitmap(source, PixelFormats.Bgr32, null, 0);
+        byte[] pixels = new byte[checked(bgr.PixelWidth * bgr.PixelHeight * 4)]; bgr.CopyPixels(pixels, bgr.PixelWidth * 4, 0); return pixels;
     }
 
     private static BitmapSource CreateFixture()

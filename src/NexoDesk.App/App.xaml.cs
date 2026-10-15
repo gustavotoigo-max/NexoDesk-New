@@ -267,6 +267,7 @@ public partial class App : Application
                 return;
         }
 
+        _state?.FlushImagePreferences();
         _exiting = true;
         if (_window is not null) _window.IsEnabled = false;
 

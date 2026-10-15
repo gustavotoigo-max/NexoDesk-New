@@ -19,6 +19,8 @@ public sealed class AdaptiveDesktopImage : FrameworkElement
         typeof(AdaptiveDesktopImage), new FrameworkPropertyMetadata(true, OnModeChanged));
     public static readonly DependencyProperty ActualSizeProperty = DependencyProperty.Register(nameof(ActualSize), typeof(bool),
         typeof(AdaptiveDesktopImage), new FrameworkPropertyMetadata(false, OnModeChanged));
+    public static readonly DependencyProperty SharpnessPercentProperty = DependencyProperty.Register(nameof(SharpnessPercent), typeof(int),
+        typeof(AdaptiveDesktopImage), new FrameworkPropertyMetadata(35, (owner, _) => ((AdaptiveDesktopImage)owner).Refresh(), (owner, value) => Math.Clamp((int)value, 0, 100)));
     private static readonly DependencyPropertyKey FitStatusPropertyKey = DependencyProperty.RegisterReadOnly(nameof(FitStatus), typeof(string),
         typeof(AdaptiveDesktopImage), new PropertyMetadata("Aguardando imagem"));
     public static readonly DependencyProperty FitStatusProperty = FitStatusPropertyKey.DependencyProperty;
@@ -41,6 +43,7 @@ public sealed class AdaptiveDesktopImage : FrameworkElement
 
     public BitmapSource? Source { get => (BitmapSource?)GetValue(SourceProperty); set => SetValue(SourceProperty, value); }
     public bool EnhancedFit { get => (bool)GetValue(EnhancedFitProperty); set => SetValue(EnhancedFitProperty, value); }
+    public int SharpnessPercent { get => (int)GetValue(SharpnessPercentProperty); set => SetValue(SharpnessPercentProperty, value); }
     public bool ActualSize { get => (bool)GetValue(ActualSizeProperty); set => SetValue(ActualSizeProperty, value); }
     public string FitStatus => (string)GetValue(FitStatusProperty);
     public DesktopImageLayout Layout => Source is { } source ?
@@ -161,11 +164,11 @@ public sealed class AdaptiveDesktopImage : FrameworkElement
                 _gpu.Renderer.UploadFrame(Source);
                 _needsFullUpload = false;
             }
-            _ready = _gpu.Present(layout.PixelWidth, layout.PixelHeight);
+            _ready = _gpu.Present(layout.PixelWidth, layout.PixelHeight, SharpnessPercent / 100f);
             if (_ready)
             {
                 _renderedLayout = layout;
-                SetValue(FitStatusPropertyKey, "Ajuste nítido");
+                SetValue(FitStatusPropertyKey, $"GPU · Nitidez {SharpnessPercent}% · Escala {100.0 * layout.PixelWidth / Source.PixelWidth:0.#}%");
             }
             else
             {

@@ -21,6 +21,18 @@ public class ConfigTests
         CertificateSha256 = A,
     };
 
+    [Theory]
+    [InlineData(-20, 0)]
+    [InlineData(0, 0)]
+    [InlineData(35, 35)]
+    [InlineData(100, 100)]
+    [InlineData(150, 100)]
+    public void ImageSharpnessPersistsAndIsLimited(int value, int expected)
+    {
+        var config = Valid(); config.Admin.ImageSharpnessPercent = value;
+        Assert.Equal(expected, ConfigStore.Parse(ConfigStore.Serialize(config)).Admin.ImageSharpnessPercent);
+    }
+
     [Fact]
     public void Valid_HasNoProblems()
     {
@@ -98,6 +110,7 @@ public class ConfigTests
         AppConfig old = ConfigStore.Parse("{\"remote\":{\"maxFps\":30}}");
         Assert.Equal(TransmissionMode.Stable, old.Remote.TransmissionMode);
         Assert.True(old.Admin.EnhancedWindowFit);
+        Assert.Equal(35, old.Admin.ImageSharpnessPercent);
         old.Admin.EnhancedWindowFit = false;
         Assert.False(ConfigStore.Parse(ConfigStore.Serialize(old)).Admin.EnhancedWindowFit);
         AppConfig cfg = Valid();

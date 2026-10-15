@@ -83,6 +83,15 @@ public sealed record AdminSettings
 
     /// <summary>Redução cúbica e nitidez local ao ajustar a tela remota à janela.</summary>
     public bool EnhancedWindowFit { get; set; } = true;
+
+    public const int DefaultImageSharpnessPercent = 35;
+    private int _imageSharpnessPercent = DefaultImageSharpnessPercent;
+    /// <summary>Intensidade do reforço local; 0 não aplica Sharpen, 100 é o máximo do filtro.</summary>
+    public int ImageSharpnessPercent
+    {
+        get => _imageSharpnessPercent;
+        set => _imageSharpnessPercent = Math.Clamp(value, 0, 100);
+    }
 }
 
 /// <summary>

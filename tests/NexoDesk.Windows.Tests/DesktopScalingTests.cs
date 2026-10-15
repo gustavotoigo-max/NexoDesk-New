@@ -112,6 +112,11 @@ public class DesktopScalingTests
         renderer.Render(0); byte[] cubic = renderer.ReadPixels();
         renderer.Render(0.35f); byte[] sharp = renderer.ReadPixels();
         Assert.False(cubic.SequenceEqual(sharp));
+        renderer.Render(1); byte[] maximum = renderer.ReadPixels();
+        Assert.False(sharp.SequenceEqual(maximum));
+        renderer.Render(0.35f); Assert.Equal(sharp, renderer.ReadPixels());
+        Assert.Throws<ArgumentOutOfRangeException>(() => renderer.Render(float.NaN));
+        Assert.Throws<ArgumentOutOfRangeException>(() => renderer.Render(1.01f));
         Assert.Throws<ArgumentException>(() => renderer.UploadBlock(63, 0, 2, 1, new byte[8]));
         Assert.Throws<ArgumentException>(() => renderer.UploadBlock(0, 0, 1, 1, new byte[3]));
     }
@@ -156,6 +161,7 @@ public class DesktopScalingTests
             Assert.Equal(1, attempts);
             view.PresentPendingFrame(); // Não repetir falha a cada quadro.
             Assert.Equal(1, attempts);
+            view.SharpnessPercent = 85; view.PresentPendingFrame(); Assert.Equal(1, attempts);
             view.ActualSize = true;
             view.PresentPendingFrame();
             Assert.Contains("100%", view.FitStatus);

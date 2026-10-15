@@ -22,8 +22,21 @@
                 <Run Text="  ·  " /><Run Text="{Binding DataRateText, Mode=OneWay}" Foreground="{DynamicResource Nx.OnNavy}" />
             </TextBlock>
             <ToggleButton x:Name="ActualScale" Content="100%" ToolTip="Mostrar pixels em tamanho real; desmarque para ajustar à janela." Click="OnToggleScale" Margin="0,0,8,0" Padding="10,4" />
-            <ToggleButton Content="Nitidez" IsChecked="{Binding EnhancedWindowFit}" Click="OnToggleSharpness" ToolTip="Melhorar a imagem reduzida. Desative para comparar com o ajuste anterior; 100% preserva os pixels originais."
-                          Margin="0,0,8,0" Padding="10,4" />
+            <Button x:Name="SharpnessButton" Style="{DynamicResource Nx.Button.Navy}" Content="Nitidez" Click="OnOpenSharpness"
+                    ToolTip="Ajustar a nitidez da imagem de 0 a 100%, com prévia imediata." Margin="0,0,8,0" Padding="10,4" />
+            <Popup x:Name="SharpnessPopup" PlacementTarget="{Binding ElementName=SharpnessButton}" Placement="Bottom"
+                   StaysOpen="False" AllowsTransparency="True" Closed="OnSharpnessClosed" PreviewKeyDown="OnSharpnessKeyDown">
+                <Border Background="{DynamicResource Nx.Surface}" BorderBrush="{DynamicResource Nx.Border}" BorderThickness="1"
+                        CornerRadius="4" Padding="18" Width="350" Margin="0,6,0,0">
+                    <StackPanel>
+                        <TextBlock Text="NITIDEZ EM JANELA" Style="{DynamicResource Nx.SectionLabel}" />
+                        <appControls:ImageFitOptions x:Name="SharpnessOptions" />
+                        <TextBlock Style="{DynamicResource Nx.Hint}" Text="Apenas a visualização local muda. O botão 100% da barra mostra os pixels em tamanho real, sem filtros." />
+                        <Button Style="{DynamicResource Nx.Button.Small}" Content="Concluir" Click="OnCloseSharpness"
+                                HorizontalAlignment="Right" Margin="0,12,0,0" />
+                    </StackPanel>
+                </Border>
+            </Popup>
             <Button Style="{DynamicResource Nx.Button.Navy}" Content="Desconectar" Command="{Binding DisconnectCommand}" Margin="0,0,4,0" />
         </StackPanel>
     </ui:NxWindow.TitleBarContent>
@@ -54,7 +67,7 @@
         <!-- Vídeo remoto: ajustado à área útil, sem distorção -->
         <ScrollViewer x:Name="VideoScroll" Focusable="False" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Disabled"
                       HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" ScrollChanged="OnVideoScroll">
-            <appControls:AdaptiveDesktopImage x:Name="RemoteImage" Source="{Binding Frame}" EnhancedFit="{Binding EnhancedWindowFit}"
+            <appControls:AdaptiveDesktopImage x:Name="RemoteImage" Source="{Binding Frame}" EnhancedFit="{Binding ImageFit.EnhancedWindowFit}" SharpnessPercent="{Binding ImageFit.SharpnessPercent}"
                                              SnapsToDevicePixels="True" UseLayoutRounding="True" Focusable="True" />
         </ScrollViewer>
 

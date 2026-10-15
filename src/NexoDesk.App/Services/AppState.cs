@@ -8,6 +8,10 @@ namespace NexoDesk.App.Services;
 public sealed class AppState
 {
     private readonly MachineState _machine;
+    private ViewModels.ImageFitViewModel? _imageFit;
+    public ViewModels.ImageFitViewModel ImageFit => _imageFit ??= new(Config.Admin, (enabled, sharpness) =>
+        Update(c => { c.Admin.EnhancedWindowFit = enabled; c.Admin.ImageSharpnessPercent = sharpness; }));
+    public void FlushImagePreferences() => _imageFit?.Flush();
     private AppState(MachineState machine) => _machine = machine;
     public AppConfig Config => _machine.Config;
     public X509Certificate2 Certificate => _machine.Certificate;

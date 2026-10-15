@@ -40,6 +40,8 @@ public partial class SessionWindow : NxWindow
         RemoteImage.EnhancementFailed += vm.LogImageFallback;
         Closed += (_, _) =>
         {
+            SharpnessPopup.IsOpen = false;
+            vm.ImageFit.Flush();
             vm.DetachPresentation();
             vm.CloseRequested -= Close;
             vm.ControlLost -= OnControlLost;
@@ -100,6 +102,7 @@ public partial class SessionWindow : NxWindow
     /// <summary>Tela cheia local; não altera resolução, escala nem sessão do PC REMOTO.</summary>
     private void ToggleFullScreen()
     {
+        SharpnessPopup.IsOpen = false;
         ReleaseHeldInputs();
         if (IsFullScreen)
         {
@@ -224,7 +227,25 @@ public partial class SessionWindow : NxWindow
         UpdateCursorOverlay();
         RestoreRemoteKeyboardFocus();
     }
-    private void OnToggleSharpness(object sender, RoutedEventArgs e) => RestoreRemoteKeyboardFocus();
+    private void OnOpenSharpness(object sender, RoutedEventArgs e)
+    {
+        ReleaseHeldInputs();
+        Keyboard.ClearFocus();
+        SharpnessOptions.DataContext = _vm.ImageFit;
+        SharpnessPopup.IsOpen = true;
+        Dispatcher.InvokeAsync(() => { if (SharpnessPopup.IsOpen) SharpnessOptions.FocusSlider(); },
+            System.Windows.Threading.DispatcherPriority.Input);
+    }
+    private void OnCloseSharpness(object sender, RoutedEventArgs e) => SharpnessPopup.IsOpen = false;
+    private void OnSharpnessClosed(object? sender, EventArgs e)
+    {
+        _vm.ImageFit.Flush();
+        RestoreRemoteKeyboardFocus();
+    }
+    private void OnSharpnessKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Escape) { SharpnessPopup.IsOpen = false; e.Handled = true; }
+    }
     private void OnVideoScroll(object sender, ScrollChangedEventArgs e) { if (_vm is not null) UpdateCursorOverlay(); }
     private void ApplyScale()
     {

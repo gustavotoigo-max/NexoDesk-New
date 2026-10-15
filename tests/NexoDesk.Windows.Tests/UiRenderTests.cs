@@ -57,10 +57,10 @@ public class UiRenderTests
                     Assert.True(file.Length > 10_000);
                 }
                 stage = "configurações";
-                var settings = new SettingsWindow(null!) { DataContext = new PreviewSettings(), Height = 1000, MaxHeight = 1000 };
+                var settings = new SettingsWindow(null!) { DataContext = new PreviewSettings { IsAdmin = true }, Height = 1000, MaxHeight = 1000 };
                 var settingsContent = (FrameworkElement)settings.Content;
                 settings.Content = null;
-                settingsContent.DataContext = new PreviewSettings();
+                settingsContent.DataContext = new PreviewSettings { IsAdmin = true };
                 var settingsBorder = new Border { Child = settingsContent, Background = (Brush)app.FindResource("Nx.Bg") };
                 System.Windows.Documents.TextElement.SetForeground(settingsBorder, (Brush)app.FindResource("Nx.Text"));
                 settingsBorder.Measure(new Size(640, 1000));
@@ -93,6 +93,17 @@ public class UiRenderTests
                     app.Resources.MergedDictionaries[1] = new ResourceDictionary
                     { Source = new Uri("pack://application:,,,/NexoDesk.Ui;component/Themes/" + theme + ".xaml") };
                     string suffix = theme.ToString().ToLowerInvariant();
+                    var imageFit = new ImageFitViewModel(new AdminSettings(), (_, _) => { });
+                    var imageOptions = new ImageFitOptions { DataContext = imageFit, Width = 314 };
+                    var optionsRoot = new Border { Child = imageOptions, Padding = new Thickness(18), Width = 350, Background = (Brush)app.FindResource("Nx.Surface") };
+                    optionsRoot.Measure(new Size(350, 240)); optionsRoot.Arrange(new Rect(0, 0, 350, 240)); optionsRoot.UpdateLayout();
+                    var optionsImage = new RenderTargetBitmap(350, 240, 96, 96, PixelFormats.Pbgra32); optionsImage.Render(optionsRoot);
+                    var optionsPng = new PngBitmapEncoder(); optionsPng.Frames.Add(BitmapFrame.Create(optionsImage));
+                    using (var file = File.Create(Path.Combine(output, $"sharpness-{suffix}.png"))) optionsPng.Save(file);
+                    var slider = (Slider)imageOptions.FindName("SharpnessSlider");
+                    slider.Value = 80; Assert.Equal(80, imageFit.SharpnessPercent);
+                    imageFit.ResetCommand.Execute(null); Assert.Equal(35, slider.Value);
+                    imageFit.Flush();
                     var pair = new AddComputerWindow();
                     RenderContent(pair, new PreviewPairing(), $"pairing-{suffix}.png", 660, 550);
                     Assert.True(pair.AddressBox.ActualWidth >= 580);
@@ -165,7 +176,8 @@ public class UiRenderTests
 
     public sealed class PreviewSettings
     {
-        public bool IsAdmin => false;
+        public bool IsAdmin { get; set; }
+        public ImageFitViewModel ImageFit { get; } = new(new AdminSettings(), (_, _) => { });
         public bool SimultaneousAccessEnabled { get; set; } = true;
         public string DeviceName { get; set; } = "PC de testes";
         public string RoleText => "PC REMOTO — pode ser acessado pelo ADMIN";
@@ -180,7 +192,7 @@ public class UiRenderTests
         public string Fingerprint => "AAAA BBBB CCCC…";
         public string FullFingerprint => new string('A', 64);
         public string ValidityText => "válida até 14/10/2027";
-        public string Version => "1.4.0";
+        public string Version => "1.6.0";
         public PreviewUpdate Update { get; } = new();
     }
 

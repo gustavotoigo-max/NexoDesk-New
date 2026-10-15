@@ -86,16 +86,7 @@ public sealed class AdminViewModel : ObservableObject
         }
     }
 
-    public bool EnhancedWindowFit
-    {
-        get => _state.Config.Admin.EnhancedWindowFit;
-        set
-        {
-            if (value == EnhancedWindowFit) return;
-            _state.Update(c => c.Admin.EnhancedWindowFit = value);
-            OnPropertyChanged();
-        }
-    }
+    public ImageFitViewModel ImageFit => _state.ImageFit;
 
     public string Summary
     {

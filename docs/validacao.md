@@ -2,7 +2,7 @@
 
 ## Executado localmente
 
-- Compilação Release sem erros/avisos; 251 testes aprovados na 1.5.0 (153 unitários, 37 de integração e 61 Windows).
+- Compilação Release sem erros/avisos; 259 testes aprovados na 1.6.0 (160 unitários, 37 de integração e 62 Windows).
 - Framing, mensagens, estados, certificados e configuração.
 - TLS mútuo real em loopback, pareamento, streaming, sessão única e duas sessões simultâneas.
 - Duas imagens independentes com alteração de um pixel, participante lento sem bloquear o outro, terceira conexão recusada/vaga reutilizada, saída independente, senha inválida, observador sem entrada e encerramento de todos.
@@ -23,6 +23,8 @@
 - Diálogos de pareamento/senha renderizados nos dois temas; largura/altura dos campos, revelação/edição/ocultação/limpeza de senha e faixa oculta/visível verificados sem HWND.
 - Benchmark sintético de texto: 257.007 bytes em JPEG completo versus 1.375 bytes em blocos sem perda.
 - Regressão de foco: evento roteado real do WPF reproduz a tentativa do ScrollViewer de tomar foco, e o clique protegido impede que chegue ao contêiner. Validação automatizada sem janela nativa; usuário confirmou que o teclado voltou a funcionar no cenário testado.
+- Nitidez manual 0–100: configuração antiga recebe 35, limites/persistência, prévia imediata e gravação coalescida, restauração do padrão e ligação bidirecional do slider real. Opções renderizadas nos dois temas sem janela nativa.
+- Ferramenta de comparação gerou intensidades 0/20/35/50/65/80/100 em quatro reduções; reconstrução anterior aos filtros teve erro RGB zero/SSIM 1. Apresentação compartilhada na GPU local funcionou. Não mede conforto visual nem compara automaticamente com o TeamViewer.
 - Efeitos Direct2D nativos em WARP: cor/alpha opacos, alteração de um pixel, troca de resolução, invalidação de cache e buffers inválidos.
 - Ajuste com DPI 100%, 125% e 150%, mapeamento do mouse, atualização do bitmap original e fallback por falha de GPU.
 - Comparação visual sintética de Fant/cúbico/cúbico com nitidez em 50%, 66,7% e 75%; superfície D3D9Ex/D3D11 compartilhada funcionando na GPU local. [Detalhes e procedimento](ajuste-imagem.md).
@@ -30,7 +32,7 @@
 
 CI inicialmente encontrou uma corrida no teste de mouse/teclado: fechar o TLS logo após enviar não confirma processamento remoto. O fixture agora sinaliza a entrada recebida antes do encerramento, mantendo a verificação de ordem e liberação de teclas; código de sessão/transmissão preservado.
 
-TRX em tests/*/TestResults. Log final da entrega em artifacts/build-1.5.0.log.
+TRX em tests/*/TestResults. Log final da entrega em artifacts/build-1.6.0.log.
 
 ## Confirmado pelo usuário
 
@@ -57,6 +59,7 @@ O ambiente de execução do desenvolvimento não tem token elevado do Windows. N
 - [ ] Bloquear/desbloquear, atravessar UAC e controlar aplicativos elevados.
 - [ ] Confirmar aviso de dez segundos, Fechar aviso sem desconectar, estado na bandeja, aviso sem UI e corte local.
 - [ ] Cobertura adicional de teclado: alternar Nitidez/100%, entrar/sair de tela cheia, Alt+Tab, teclas de navegação e atalhos no remoto.
+- [ ] Conferir painel Nitidez: arrastar 0–100, Esc/Concluir/clique fora, restauração do foco e teclado remoto, salvar/reabrir, preferência nas sessões abertas e uso prolongado de texto.
 - [ ] Comparar ajuste nítido/anterior em texto, planilhas e movimento nos PCs; redimensionar, mudar DPI/monitor, minimizar/restaurar e alternar 100%.
 - [ ] Cobertura adicional de tela cheia: restauração da janela, Alt+Tab, Ctrl+Alt+F11 e F11 remoto, DPI misto e monitor secundário.
 - [ ] Trocar resolução/DPI; validar clique/arraste/scroll/teclado ABNT2.
@@ -66,4 +69,4 @@ O ambiente de execução do desenvolvimento não tem token elevado do Windows. N
 
 GDI/blocos Brotli sem perda implementados; JPEG permanece para negociação com versões antigas. DXGI/H.264 e medições em redes reais não foram executados. Conteúdo protegido pode não ser capturado. Sem Ctrl+Alt+Del, áudio, arquivos, clipboard ou múltiplos monitores.
 
-Instalador 1.5.0 sem assinatura, com runtime e SHA-256 verificados; publicação no GitHub pelo workflow de compilação, testes e release. Instaladores 1.1.0, 1.2.0 e 1.2.1 preservados. Novo motor experimental não implementado nesta entrega.
+Instalador 1.6.0 sem assinatura, com runtime e SHA-256 verificados; publicação no GitHub pelo workflow de compilação, testes e release. Instaladores 1.1.0, 1.2.0 e 1.2.1 preservados. Novo motor experimental não implementado nesta entrega.

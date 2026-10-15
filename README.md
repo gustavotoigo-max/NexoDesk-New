@@ -11,7 +11,7 @@ Acesso remoto privado para até cinco PCs Windows x64. Um aplicativo e um instal
 - Até dois ADMINs no mesmo remoto, com controle transferido pela atividade de mouse/teclado.
 - Aviso de acesso por dez segundos, com botão para fechar sem desconectar.
 - Blocos de tela sem perda, fila de imagem limitada e visualização a 100%.
-- Ajuste nítido à janela pela GPU, com botão Nitidez para comparar com o ajuste anterior, sem alterar o monitor remoto.
+- Ajuste nítido à janela pela GPU, com intensidade de 0–100%, prévia imediata e preferência salva, sem alterar o monitor remoto.
 - Atualizações consultadas ao abrir/a cada minuto e pelo botão Atualizar na janela principal, com faixa somente quando há versão nova e limpeza dos processos da instalação anterior.
 - Modo estável de transmissão preservado; seletor experimental preparado para uma futura versão.
 - Serviço SYSTEM com agente na sessão física, destinado ao acesso antes do login e a aplicativos elevados.
@@ -19,11 +19,11 @@ Acesso remoto privado para até cinco PCs Windows x64. Um aplicativo e um instal
 
 **Estado:** implementação e instalador disponíveis. Compilação e testes locais descritos em [validação](docs/validacao.md). Login/UAC, reinício e operação entre dois PCs ainda exigem validação real. Instalador sem assinatura Authenticode.
 
-**Versão 1.5.0**, com ajuste nítido à janela e tela cheia opcional na sessão (Ctrl+Alt+F11). Instalador e SHA-256 disponíveis no [release](https://github.com/gustavotoigo-max/NexoDesk-New/releases/tag/v1.5.0). [Plano da transmissão experimental](docs/plano-transmissao.md).
+**Versão 1.6.0**, com ajuste nítido à janela e tela cheia opcional na sessão (Ctrl+Alt+F11). Instalador e SHA-256 disponíveis no [release](https://github.com/gustavotoigo-max/NexoDesk-New/releases/tag/v1.6.0). [Plano da transmissão experimental](docs/plano-transmissao.md).
 
 ## Instalar
 
-Baixe o [instalador 1.5.0](https://github.com/gustavotoigo-max/NexoDesk-New/releases/download/v1.5.0/NexoDesk-New-Setup-1.5.0.exe) e execute nos dois computadores. A cópia local fica em **artifacts/NexoDesk-New-Setup-1.5.0.exe**. As versões 1.1.0 e 1.2.1 permanecem nos releases anteriores. O instalador inclui o runtime .NET; não é necessário baixá-lo para executar.
+Baixe o [instalador 1.6.0](https://github.com/gustavotoigo-max/NexoDesk-New/releases/download/v1.6.0/NexoDesk-New-Setup-1.6.0.exe) e execute nos dois computadores. A cópia local fica em **artifacts/NexoDesk-New-Setup-1.6.0.exe**. As versões 1.1.0 e 1.2.1 permanecem nos releases anteriores. O instalador inclui o runtime .NET; não é necessário baixá-lo para executar.
 
 1. No remoto, escolha **PC REMOTO**.
 2. Escolha **Tailscale (internet)** ou **Rede local**, selecione o IP quando necessário e aplique.
@@ -36,7 +36,9 @@ No PC REMOTO, o **X** recolhe a janela para a bandeja. **Sair e encerrar o servi
 
 No ADMIN, o ícone perto do relógio mostra um marcador quando há conexão ativa. A dica informa o remoto ou a quantidade de conexões. Duplo clique abre a janela principal; o menu permite **Encerrar todas as conexões** ou **Sair do NexoDesk New**. Fechar a janela principal do ADMIN encerra o programa.
 
-Para acesso simultâneo, atualize o PC REMOTO e os dois ADMINs para 1.5.0. Cada ADMIN deve ser pareado individualmente, com um código temporário para cada pareamento; ambos usam a senha de acesso do mesmo remoto. Os dois continuam vendo a mesma tela. Uma nova ação de mouse/teclado assume o controle; atividade física no remoto também transfere a indicação para a pessoa local. Teclas/botões do controlador remoto anterior são liberados. A entrada física permanece disponível. Em **Configurações do PC REMOTO → Acesso simultâneo**, desmarque a opção para voltar ao modo anterior de um ADMIN. Aplicar essa mudança encerra as conexões abertas. [Comportamento e limites](docs/acesso-simultaneo.md).
+Para acesso simultâneo, atualize o PC REMOTO e os dois ADMINs para 1.6.0. Cada ADMIN deve ser pareado individualmente, com um código temporário para cada pareamento; ambos usam a senha de acesso do mesmo remoto. Os dois continuam vendo a mesma tela. Uma nova ação de mouse/teclado assume o controle; atividade física no remoto também transfere a indicação para a pessoa local. Teclas/botões do controlador remoto anterior são liberados. A entrada física permanece disponível. Em **Configurações do PC REMOTO → Acesso simultâneo**, desmarque a opção para voltar ao modo anterior de um ADMIN. Aplicar essa mudança encerra as conexões abertas. [Comportamento e limites](docs/acesso-simultaneo.md).
+
+Na janela da sessão, clique em **Nitidez**, ajuste a barra de **0–100%** e clique em **Concluir** (ou Esc). O teclado volta à imagem. **Restaurar padrão (35%)** recupera o filtro anterior; desmarcar a melhoria recupera o ajuste original. A mesma opção está em **Configurações → Imagem em janela**. O ajuste é compartilhado pelas sessões abertas e salvo para as próximas. Zero desliga só o reforço; o botão **100%** da barra continua sendo tamanho real, sem filtros. O rodapé mostra uso da GPU, intensidade e escala efetiva. [Comparação e limites](docs/ajuste-imagem.md).
 
 Os campos de pareamento e senha foram ampliados; o olho revela/oculta cada senha. A interface usa seções com separadores e cantos discretos.
 

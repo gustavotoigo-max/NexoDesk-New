@@ -1,34 +1,18 @@
 # Decisões e estado
 
-- Nome do software confirmado pelo usuário: NexoDesk New.
+- Produto: NexoDesk New, C#/.NET 10/WPF, instalador Windows x64 autossuficiente. Interface sempre elevada, inclusive na primeira abertura.
+- ADMIN pareado por certificado individual e senha a cada conexão. PBKDF2-SHA256, 600.000 iterações, prova HMAC vinculada a nonce/certificados/modo. Código temporário pareia uma vez; não substitui a senha.
+- Tailscale pela internet ou rede local privada com interface escolhida; sem relay próprio, escuta pública ou portas no roteador. Usuário confirmou funcionamento pelo Tailscale.
+- Serviço SYSTEM supervisiona agente na sessão física; UI elevada separada. Job Object contém o agente. Configuração em ProgramData/NexoDesk-New e certificado LocalMachine com ACL restrita. Instalação separada da antiga, sem migração silenciosa.
+- Preservar o monitor físico, usado simultaneamente por alguém no remoto. Sem alteração de resolução física/monitor virtual nesta entrega.
+- Motor Estável: captura GDI, blocos alterados sem perda/Brotli e fila/ACK limitados; JPEG por negociação antiga. Experimental continua indisponível. Plano em docs/plano-transmissao.md; DXGI/H.264 depois.
+- Aviso por dez segundos, fechamento manual sem desconectar; estado e encerramento permanecem na janela/bandeja.
+- Atualizador consulta leve ao abrir/a cada minuto; faixa apenas para versão nova. Botão Atualizar permite consulta antecipada, instalação iniciada pelo usuário.
+- Autorização permanente do usuário: publicar código e release de cada nova versão no GitHub, com instalador/SHA-256 após verificações, sem reconfirmar. Conferir workflow, assets e disponibilidade no atualizador.
+- Saída explícita encerra UI/supervisor/agente desta instalação, preservando Tailscale e início no Windows. Instalador/atualizador limpa processos por caminho/PID; mantém segurança contra executáveis homônimos. ADMIN fecha pelo X; X do REMOTO recolhe à bandeja. Ambos têm ícone/indicador de conexão.
+- Interface com menos cartões, raios discretos, campos ampliados e senha com olho.
+- Tela cheia opcional foi confirmada pelo usuário. Teclado voltou a funcionar após correção de foco da 1.3.1; preservar essa proteção.
+- 1.5.0: dois ADMINs veem a mesma tela; atividade nova transfere controle sem desconectar observadores. Atividade física também participa, sem bloquear hardware. Modo anterior de um ADMIN selecionável. Detalhes/limites em docs/acesso-simultaneo.md.
+- 1.6.0: nitidez GPU de 0–100%, prévia imediata, padrão anterior 35%, restauração e preferência compartilhada/salva. Zero desliga reforço; botão 100% mantém pixels originais. Ajuste anterior permanece selecionável. Ferramenta de comparação mede fidelidade/contraste; conforto visual depende da avaliação nos PCs.
 
-- O resumo consolidado orienta os requisitos evoluídos após o plano inicial.
-- Solicitação atual: interface somente como administrador.
-- Usuário confirmou Tailscale pela internet e conexão direta na mesma rede local.
-- C#/.NET 10 e WPF; programa único com dois papéis e instalador autossuficiente.
-- Conexão escolhida explicitamente. Com vários IPs locais, o responsável seleciona a interface.
-- Sem relay externo, encaminhamento de portas ou escuta pública.
-- ADMIN pareado e senha a cada conexão; habilitação explícita no remoto, sem pergunta Permitir por sessão.
-- PBKDF2-SHA256, 600.000 iterações, sal de 32 bytes. Prova HMAC ligada ao nonce, certificados e modo.
-- Identidade/configuração compartilhada em LocalMachine/ProgramData, com ACL para SYSTEM/administradores.
-- Serviço SYSTEM supervisiona agente sem interface na sessão física. A UI elevada permanece separada.
-- GDI e envio diferencial sem perda em 1.1.0 preservados como modo Estável na 1.2.0; JPEG mantido por negociação com 1.0.
-- Usuário escolheu preparar o seletor/plano nesta entrega; implementar o novo motor depois. Experimental fica indisponível até existir implementação validada.
-- Aviso de acesso por dez segundos, com fechamento manual sem encerrar a conexão; estado e encerramento permanecem na janela/bandeja.
-- Consulta leve de releases ao abrir/a cada minuto; faixa somente para versão nova, botão Atualizar permanente para consulta manual e instalação iniciada pelo usuário.
-- Usuário confirmou uso simultâneo do monitor físico do PC REMOTO: sua resolução deve ser preservada. Monitor virtual está em pesquisa, sem implementação/instalação nesta entrega.
-- Tela cheia opcional na 1.2.1, mantendo a escolha de 100% e restaurando a janela ao sair. Usuário confirmou que funcionou perfeitamente no seu teste.
-- Autorização permanente do usuário: a cada nova versão, enviar o código ao GitHub e publicar o release com instalador e SHA-256 após as verificações necessárias, sem pedir nova confirmação de publicação. Conferir conclusão do workflow e disponibilidade no atualizador.
-- Ajuste nítido local autorizado e implementado na 1.3.0: redução cúbica Direct2D e Sharpen moderado, apresentação GPU compartilhada com WPF, retorno ao ajuste anterior por botão/configuração ou falha de GPU. Não muda a resolução física; 100% não aplica filtros. Aceitação visual nos PCs ainda pendente.
-- Usuário relatou teclado sem funcionamento após a 1.3.0. Correção de foco na 1.3.1: cliques remotos não focam o contêiner; botões Nitidez/100% devolvem foco à imagem. Usuário confirmou que o problema de teclado foi resolvido após a correção.
-- Na 1.4.0, primeira abertura pelo instalador herda elevação; saída explícita na bandeja encerra os processos desta instalação, preservando Tailscale e preferência de início no Windows. Atualização/desinstalação conferem caminhos e PIDs e encerram também supervisor/agente; recuperação do serviço suspensa durante término forçado.
-- Interface com menos cartões, seções separadas por linhas, raios de 4/6 px, campos maiores no pareamento e senhas com olho. Motor de transmissão permanece Estável.
-- Na 1.4.1, ADMIN também tem ícone na bandeja: marcador de conexão ativa, dica com remoto/quantidade, reabertura da janela, encerramento de conexões e saída. Fechar o ADMIN continua encerrando o programa; somente o X do REMOTO recolhe para a bandeja.
-- Na 1.5.0, até dois ADMINs veem o mesmo remoto. Regra aprovada: nova atividade transfere o controle, inclusive atividade física, sem desconectar observadores. Teclas/botões anteriores são liberados; hardware local não é bloqueado. Configuração remota restaura o modo anterior de um ADMIN. Validação física/UAC permanece pendente; detalhes em docs/acesso-simultaneo.md.
-- Plano da evolução em docs/plano-transmissao.md: instrumentação, envio limitado, DXGI e H.264, mantendo o Estável como padrão.
-- Instalação separada da antiga: novo AppId, Program Files\NexoDesk New e ProgramData\NexoDesk-New.
-- Não há migração silenciosa de certificados, senhas ou pareamentos.
-- Configuração permanece desabilitada até definir senha e habilitar acesso.
-- Código temporário pareia uma vez; endereço e certificado ficam no catálogo para conexões posteriores.
-
-Usuário autorizou publicar código e release 1.1.0 e, depois, as melhorias acumuladas no release 1.2.1 no GitHub. A 1.2.0 foi uma entrega local intermediária; a publicação 1.2.1 reuniu essas melhorias; versão atual 1.5.0. Cada nova versão enviada à main deve gerar um release. Testes de aceitação em duas máquinas permanecem pendentes. Consulte [validação](validacao.md) antes de depender do serviço em login/UAC/reinício.
+Versão atual 1.6.0. Compilação e 259 testes locais aprovados; validação física, login/UAC e uso prolongado entre PCs permanecem pendentes. Consulte docs/validacao.md. Sem áudio, arquivos, clipboard, múltiplos monitores ou Ctrl+Alt+Del sintetizado.

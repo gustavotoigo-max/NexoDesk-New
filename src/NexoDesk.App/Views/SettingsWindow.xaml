@@ -5,6 +5,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:ui="clr-namespace:NexoDesk.Ui.Controls;assembly=NexoDesk.Ui"
              xmlns:vm="clr-namespace:NexoDesk.App.ViewModels"
+             xmlns:appControls="clr-namespace:NexoDesk.App.Controls"
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance Type=vm:SettingsViewModel}"
              Title="Configurações"
@@ -68,10 +69,9 @@
                 Visibility="{Binding IsAdmin, Converter={StaticResource BoolToVisibility}}">
             <StackPanel>
                 <TextBlock Style="{DynamicResource Nx.SectionLabel}" Text="IMAGEM EM JANELA" />
-                <CheckBox Content="Melhorar nitidez ao ajustar à janela" IsChecked="{Binding EnhancedWindowFit}"
-                          Foreground="{DynamicResource Nx.Text}" />
+                <appControls:ImageFitOptions DataContext="{Binding ImageFit}" />
                 <TextBlock Style="{DynamicResource Nx.Hint}" TextWrapping="Wrap"
-                           Text="Ajusta a imagem localmente, preservando a resolução do PC REMOTO. Desmarque para usar o ajuste anterior. O modo 100% mantém os pixels originais. Novas sessões usam esta preferência." />
+                           Text="Ajusta a imagem localmente, preservando a resolução do PC REMOTO. Desmarque para usar o ajuste anterior. O modo 100% mantém os pixels originais. A prévia é imediata nas sessões abertas. A intensidade é salva para as próximas conexões." />
             </StackPanel>
         </Border>
 

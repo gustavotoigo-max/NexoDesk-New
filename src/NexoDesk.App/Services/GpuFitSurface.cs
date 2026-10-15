@@ -35,7 +35,7 @@ public sealed class GpuFitSurface : IDisposable
         catch { Dispose(); throw; }
     }
 
-    public bool Present(int width, int height)
+    public bool Present(int width, int height, float sharpness = 0.35f)
     {
         ObjectDisposedException.ThrowIf(_device is null, this);
         if (!Image.IsFrontBufferAvailable || !Image.TryLock(new Duration(TimeSpan.Zero))) return false;
@@ -53,7 +53,7 @@ public sealed class GpuFitSurface : IDisposable
                 Renderer.SetOutput(width, height, sharedHandle);
                 _width = width; _height = height;
             }
-            Renderer.Render();
+            Renderer.Render(sharpness);
             // Reassociar também recupera a referência liberada pelo WPF quando o front buffer some.
             Image.SetBackBuffer(D3DResourceType.IDirect3DSurface9, _surface!.NativePointer);
             Image.AddDirtyRect(new Int32Rect(0, 0, width, height));
