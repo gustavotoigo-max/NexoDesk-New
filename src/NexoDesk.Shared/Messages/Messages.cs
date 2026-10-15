@@ -62,6 +62,7 @@ public static class Features
     public const string View = "view";
     public const string Control = "control";
     public const string DesktopTiles = "desktop-tiles-v1";
+    public const string ActivityControl = "activity-control-v1";
 }
 
 public sealed record HelloMessage(int ProtocolVersion, string ClientId, string[] Capabilities, string AppVersion) : IControlMessage
@@ -277,5 +278,17 @@ internal static class Check
     {
         if (!System.Enum.IsDefined(value))
             throw new ProtocolException(ErrorCode.MalformedPayload, $"{field} inválido");
+    }
+}
+
+/// <summary>Dono atual do controle. Epoch permite descartar estados atrasados.</summary>
+public sealed record ControlStateMessage(long Epoch, string OwnerId, string OwnerName) : IControlMessage
+{
+    public void Validate()
+    {
+        if (Epoch < 0) throw new ProtocolException(ErrorCode.MalformedPayload, "geração de controle inválida");
+        Check.Id(OwnerId, nameof(OwnerId));
+        if (string.IsNullOrWhiteSpace(OwnerName)) throw new ProtocolException(ErrorCode.MalformedPayload, "nome do controlador inválido");
+        Check.Text(OwnerName, nameof(OwnerName), ProtocolConstants.MaxIdLength);
     }
 }

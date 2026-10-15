@@ -47,6 +47,10 @@
     </ui:NxWindow.FooterRightContent>
 
     <Grid Background="#05070C" ClipToBounds="True">
+        <Border Panel.ZIndex="8" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="12" Padding="10,6"
+                CornerRadius="4" Background="{DynamicResource Nx.Navy}" IsHitTestVisible="False">
+            <TextBlock Text="{Binding ControlStatus}" Foreground="{DynamicResource Nx.OnNavy}" FontSize="12" TextWrapping="Wrap" MaxWidth="520" />
+        </Border>
         <!-- Vídeo remoto: ajustado à área útil, sem distorção -->
         <ScrollViewer x:Name="VideoScroll" Focusable="False" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Disabled"
                       HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" ScrollChanged="OnVideoScroll">

@@ -26,3 +26,8 @@ DesktopUpdate: índice u32, timestamp i64, largura/altura u16, flags u8 (Reset=1
 Limites: 192 KiB por mensagem, 64 blocos, bloco de até 128×128, dimensão até 8192 e área até 32 Mi pixels. Retângulos devem estar contidos na tela. Descompressão deve produzir exatamente largura×altura×4 bytes; conteúdo truncado/excedente é rejeitado. A primeira atualização inicia uma base; deltas sem base não são aceitos pelo apresentador.
 
 O ADMIN confirma o índice após aplicar o lote. O REMOTO mantém um lote em trânsito e encerra após 15 s sem confirmação. Entrada continua sendo processada durante a espera. Final conta uma captura completa no indicador de FPS. Reset ocorre no início, ao mudar resolução e ao mudar desktop. TCP/TLS preserva ordem; deltas não são descartados no receptor.
+## Controle por atividade (1.5.0)
+
+Capacidade opcional `activity-control-v1` em ambos os Hello/HelloAck. Tipo 19 `ControlState`, JSON com `epoch` monotônico, `ownerId` e `ownerName`. Dono é o sessionId autenticado, `local` ou `none`. O agente publica somente mudanças, com consulta interna a cada 100 ms; o ADMIN ignora estados antigos. Não há mensagem de pedido: entrada nova de uma sessão autorizada para Controlar transfere a posse no agente. A permissão de enviar permanece ativa para permitir recuperação por atividade. Observação não adquire controle.
+
+A indicação de posse é negociada; a arbitragem é sempre aplicada no remoto quando Acesso simultâneo está habilitado, inclusive para clientes antigos. No modo anterior, o agente aceita um ADMIN e não anuncia essa capacidade. Versão de framing permanece 1; tipo 19 nunca é enviado sem negociação. Cada sessão conserva seu próprio FrameAck/histórico de blocos. Desconexão não libera entrada de outra sessão.

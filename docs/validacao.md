@@ -2,9 +2,12 @@
 
 ## Executado localmente
 
-- Compilação Release sem erros/avisos; 227 testes aprovados na 1.4.1 (140 unitários, 30 de integração e 57 Windows).
+- Compilação Release sem erros/avisos; 251 testes aprovados na 1.5.0 (153 unitários, 37 de integração e 61 Windows).
 - Framing, mensagens, estados, certificados e configuração.
-- TLS mútuo real em loopback, pareamento, streaming e sessão única.
+- TLS mútuo real em loopback, pareamento, streaming, sessão única e duas sessões simultâneas.
+- Duas imagens independentes com alteração de um pixel, participante lento sem bloquear o outro, terceira conexão recusada/vaga reutilizada, saída independente, senha inválida, observador sem entrada e encerramento de todos.
+- Transferência de controle por nova atividade, liberação de teclas/botões e rejeição de repetição/soltura/arraste antigos. Atividade local simulada e indisponibilidade/recuperação do monitor.
+- Interpretação de flags físicas/injetadas e tamanhos das estruturas nativas x64. Não houve instalação de hooks nem injeção de entrada no desktop real nos testes.
 - Senha correta/incorreta/ausente e prova vinculada a nonce/certificados/modo.
 - Rejeição de fator de trabalho excessivo e payloads IPC inválidos/truncados.
 - Falha de entrada libera a vaga; rejeição não solta entradas de outra sessão.
@@ -27,7 +30,7 @@
 
 CI inicialmente encontrou uma corrida no teste de mouse/teclado: fechar o TLS logo após enviar não confirma processamento remoto. O fixture agora sinaliza a entrada recebida antes do encerramento, mantendo a verificação de ordem e liberação de teclas; código de sessão/transmissão preservado.
 
-TRX em tests/*/TestResults. Log final da entrega em artifacts/build-1.4.1.log.
+TRX em tests/*/TestResults. Log final da entrega em artifacts/build-1.5.0.log.
 
 ## Confirmado pelo usuário
 
@@ -39,6 +42,8 @@ TRX em tests/*/TestResults. Log final da entrega em artifacts/build-1.4.1.log.
 
 O ambiente de execução do desenvolvimento não tem token elevado do Windows. Não foram instalados serviços, certificados de máquina ou regras de firewall no PC do usuário.
 
+- [ ] Atualizar remoto e dois ADMINs para 1.5.0; alternar atividade entre os três participantes, incluindo teclas mantidas, arrastes, observação, reconexão, senha/revogação, lock/UAC e troca de desktop. Conferir aviso de indisponibilidade do monitor e retomada.
+- [ ] Desmarcar Acesso simultâneo e confirmar funcionamento anterior com apenas um ADMIN.
 - [ ] ADMIN: confirmar ícone na bandeja sem conexão, em modo Ver a tela/Controlar, em mais de um remoto, após queda/desconexão e com janela de sessão encerrada ainda aberta. Conferir duplo clique, Encerrar todas as conexões e Sair; ícone deve ser removido na saída.
 - [ ] Confirmar primeira abertura elevada pelo instalador sem erro.
 - [ ] Confirmar consulta a cada minuto e atualização manual; faixa somente para versão superior.
@@ -61,4 +66,4 @@ O ambiente de execução do desenvolvimento não tem token elevado do Windows. N
 
 GDI/blocos Brotli sem perda implementados; JPEG permanece para negociação com versões antigas. DXGI/H.264 e medições em redes reais não foram executados. Conteúdo protegido pode não ser capturado. Sem Ctrl+Alt+Del, áudio, arquivos, clipboard ou múltiplos monitores.
 
-Instalador 1.4.1 sem assinatura, com runtime e SHA-256 verificados; publicação no GitHub pelo workflow de compilação, testes e release. Instaladores 1.1.0, 1.2.0 e 1.2.1 preservados. Novo motor experimental não implementado nesta entrega.
+Instalador 1.5.0 sem assinatura, com runtime e SHA-256 verificados; publicação no GitHub pelo workflow de compilação, testes e release. Instaladores 1.1.0, 1.2.0 e 1.2.1 preservados. Novo motor experimental não implementado nesta entrega.

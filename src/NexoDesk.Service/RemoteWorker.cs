@@ -21,6 +21,9 @@ internal sealed class RemoteWorker
     private readonly Queue<string> _events = new();
     private MachineState? _state;
     private DesktopThread? _desktop;
+    private readonly PhysicalInputState _physicalState = new();
+    private InputCoordinator? _inputCoordinator;
+    private LocalInputMonitor? _localInput;
     private AgentHost? _host;
     private string _signature = "";
     private string _address = "";
@@ -75,6 +78,7 @@ internal sealed class RemoteWorker
         }
         await monitor.ConfigureAwait(false);
         await StopHostAsync().ConfigureAwait(false);
+        _localInput?.Dispose();
         _desktop?.Dispose();
         _state?.Dispose();
     }
@@ -105,9 +109,9 @@ internal sealed class RemoteWorker
         if (TransmissionModes.Effective(settings.TransmissionMode) != TransmissionMode.Stable)
             throw new InvalidOperationException("Motor de transmissão indisponível.");
         // Revogação e desligamento da política cortam a sessão já aberta.
-        AgentSession? session = _host?.CurrentSession;
-        if (session?.Client is { } client && (_state.Find(client.Fingerprint) is null || !settings.UnattendedAccessEnabled))
-            session.End(EndReason.PermissionRevoked);
+        foreach (AgentSession session in _host?.Sessions ?? [])
+            if (session.Client is { } client && (_state.Find(client.Fingerprint) is null || !settings.UnattendedAccessEnabled))
+                session.End(EndReason.PermissionRevoked);
         if (_state.Config.Role != DeviceRole.Remote)
         {
             await StopHostAsync().ConfigureAwait(false);
@@ -116,25 +120,39 @@ internal sealed class RemoteWorker
             return;
         }
         IPAddress address = PrivateNetwork.Resolve(settings);
-        string signature = $"{address}|{settings.Port}|{_state.Config.DeviceName}|{settings.AccessPassword?.Hash}|{settings.UnattendedAccessEnabled}";
+        string signature = $"{address}|{settings.Port}|{_state.Config.DeviceName}|{settings.AccessPassword?.Hash}|{settings.UnattendedAccessEnabled}|{settings.SimultaneousAccessEnabled}";
         if (_host is not null && signature == _signature) return;
         await StopHostAsync().ConfigureAwait(false);
         _address = address.ToString();
-        _desktop ??= new DesktopThread(() => _state.Config.Remote.MaxFps, () => _state.Config.Remote.JpegQuality);
+        _desktop ??= new DesktopThread(() => _state.Config.Remote.MaxFps, () => _state.Config.Remote.JpegQuality, _physicalState);
+        if (settings.SimultaneousAccessEnabled)
+        {
+            _inputCoordinator ??= new InputCoordinator(_desktop);
+            _localInput ??= new LocalInputMonitor(_physicalState, _inputCoordinator.NotifyLocalActivity, _inputCoordinator.SetLocalMonitoringAvailable);
+        }
+        else
+        {
+            _localInput?.Dispose(); _localInput = null;
+            _inputCoordinator = null; _physicalState.Clear();
+        }
         _host = new AgentHost(new AgentHostOptions
         {
             Endpoint = new IPEndPoint(address, settings.Port),
             ServerCertificate = _state.Certificate,
             Clients = _state, Pairing = _pairing,
+            MaxSessions = settings.SimultaneousAccessEnabled ? 2 : 1,
             Session = new AgentSessionOptions
             {
                 ServerId = _state.Config.DeviceId, DisplayName = _state.Config.DeviceName,
                 AppVersion = typeof(RemoteWorker).Assembly.GetName().Version?.ToString() ?? "1.0.0",
-                Features = [Features.View, Features.Control, Features.DesktopTiles],
+                Features = settings.SimultaneousAccessEnabled
+                    ? [Features.View, Features.Control, Features.DesktopTiles, Features.ActivityControl]
+                    : [Features.View, Features.Control, Features.DesktopTiles],
                 PasswordProvider = () => { _state.Reload(); return _state.Config.Remote.AccessPassword; },
             },
-        }, new WorkerPolicy(_state), new WorkerAudit(this), _desktop, _desktop, _desktop, _desktop);
-        _host.SessionActivated += session => { _desktop.Reset(); _ = SessionNotice.WatchAsync(session); };
+        }, new WorkerPolicy(_state), new WorkerAudit(this), _desktop, _desktop, _desktop, _desktop,
+            frameFactory: settings.SimultaneousAccessEnabled ? _desktop.CreateFrameSource : null, coordinator: _inputCoordinator);
+        _host.SessionActivated += session => { if (!settings.SimultaneousAccessEnabled) _desktop.Reset(); _ = SessionNotice.WatchAsync(session); };
         _host.Start();
         _signature = signature;
         _problem = settings.AccessPassword is null ? "Defina uma senha de acesso para habilitar conexões."
@@ -149,11 +167,16 @@ internal sealed class RemoteWorker
 
     private ServiceStatus Snapshot()
     {
-        AgentSession? session = _host?.CurrentSession;
+        AgentSession[] sessions = _host?.Sessions ?? [];
         string[] events;
         lock (_events) events = _events.ToArray();
-        return new(_host is { IsRunning: true }, _problem, _address, session?.SessionId, session?.ClientName,
-            session?.Mode, _pairing.IsOpen ? _accessCode : null, _pairing.ExpiresAt, events);
+        string? key = sessions.Length == 0 ? null : string.Join("|", sessions.Select(s => s.SessionId).Order());
+        string? names = sessions.Length == 0 ? null : string.Join(" e ", sessions.Select(s => s.ClientName));
+        string? problem = _problem ?? _localInput?.Problem;
+        return new(_host is { IsRunning: true }, problem, _address, key, names,
+            sessions.FirstOrDefault()?.Mode, _pairing.IsOpen ? _accessCode : null, _pairing.ExpiresAt, events,
+            sessions.Select(s => new ActiveAccess(s.SessionId, s.ClientName, s.Mode ?? SessionMode.View)).ToArray(),
+            _inputCoordinator?.State.OwnerName);
     }
 
     private sealed class WorkerPolicy(MachineState state) : IAgentPolicy

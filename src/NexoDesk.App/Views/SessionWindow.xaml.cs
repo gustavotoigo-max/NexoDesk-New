@@ -15,6 +15,8 @@ public partial class SessionWindow : NxWindow
 {
     private readonly SessionViewModel _vm;
     private readonly HashSet<Key> _keysDown = [];
+    private readonly HashSet<Key> _handoffKeys = [];
+    private readonly HashSet<PointerButton> _handoffButtons = [];
     private readonly HashSet<PointerButton> _buttonsDown = [];
     private double _lastX, _lastY;
     private WindowState _previousState;
@@ -33,11 +35,14 @@ public partial class SessionWindow : NxWindow
         _vm = vm;
         DataContext = vm;
         vm.CloseRequested += Close;
+        vm.ControlLost += OnControlLost;
         vm.DesktopUpdated += RemoteImage.ApplyBlocks;
         RemoteImage.EnhancementFailed += vm.LogImageFallback;
         Closed += (_, _) =>
         {
+            vm.DetachPresentation();
             vm.CloseRequested -= Close;
+            vm.ControlLost -= OnControlLost;
             vm.DesktopUpdated -= RemoteImage.ApplyBlocks;
             RemoteImage.EnhancementFailed -= vm.LogImageFallback;
         };
@@ -242,6 +247,14 @@ public partial class SessionWindow : NxWindow
 
     private void OnMouseMove(object sender, MouseEventArgs e)
     {
+        _handoffButtons.RemoveWhere(button => button switch
+        {
+            PointerButton.Left => e.LeftButton != MouseButtonState.Pressed,
+            PointerButton.Right => e.RightButton != MouseButtonState.Pressed,
+            PointerButton.Middle => e.MiddleButton != MouseButtonState.Pressed,
+            _ => true,
+        });
+        if (_handoffButtons.Count > 0) return;
         if (_vm.CanControl && TryNormalize(e, out double nx, out double ny))
             _vm.SendPointer(_lastX = nx, _lastY = ny, PointerButton.None, PointerAction.Move);
     }
@@ -251,6 +264,7 @@ public partial class SessionWindow : NxWindow
         if (!_vm.CanControl)
             return;
         PointerButton button = Button(e.ChangedButton);
+        _handoffButtons.Remove(button);
         if (button != PointerButton.None && TryNormalize(e, out double nx, out double ny))
         {
             RemoteImage.FocusForRemoteInput(e);
@@ -265,6 +279,7 @@ public partial class SessionWindow : NxWindow
         if (!_vm.CanControl)
             return;
         PointerButton button = Button(e.ChangedButton);
+        _handoffButtons.Remove(button);
         if (button != PointerButton.None && _buttonsDown.Remove(button))
         {
             if (TryNormalize(e, out double nx, out double ny)) { _lastX = nx; _lastY = ny; }
@@ -275,6 +290,14 @@ public partial class SessionWindow : NxWindow
 
     private void OnMouseWheel(object sender, MouseWheelEventArgs e)
     {
+        _handoffButtons.RemoveWhere(button => button switch
+        {
+            PointerButton.Left => e.LeftButton != MouseButtonState.Pressed,
+            PointerButton.Right => e.RightButton != MouseButtonState.Pressed,
+            PointerButton.Middle => e.MiddleButton != MouseButtonState.Pressed,
+            _ => true,
+        });
+        if (_handoffButtons.Count > 0) return;
         if (_vm.CanControl && TryNormalize(e, out double nx, out double ny))
         {
             _vm.SendPointer(nx, ny, PointerButton.None, PointerAction.Wheel, e.Delta);
@@ -311,9 +334,11 @@ public partial class SessionWindow : NxWindow
 
     private bool SendKey(KeyEventArgs e, KeyAction action)
     {
+        Key key = e.Key == Key.System ? e.SystemKey : e.Key;
+        if (action == KeyAction.Down && e.IsRepeat && _handoffKeys.Contains(key)) return true;
+        _handoffKeys.Remove(key); // uma soltura ou pressão nova elimina a supressão anterior.
         if (!_vm.CanControl || !RemoteImage.IsKeyboardFocused)
             return false;
-        Key key = e.Key == Key.System ? e.SystemKey : e.Key;
         if (action == KeyAction.Down) _keysDown.Add(key); else _keysDown.Remove(key);
         int vk = KeyInterop.VirtualKeyFromKey(key);
         if (vk <= 0)
@@ -322,6 +347,12 @@ public partial class SessionWindow : NxWindow
         bool extended = IsExtended(key);
         _vm.SendKey((ushort)scan, (ushort)vk, extended, action);
         return true;
+    }
+
+    private void OnControlLost()
+    {
+        _handoffKeys.UnionWith(_keysDown); _handoffButtons.UnionWith(_buttonsDown);
+        ReleaseHeldInputs();
     }
 
     private void ReleaseHeldInputs()

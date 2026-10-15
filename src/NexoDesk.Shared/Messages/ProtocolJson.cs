@@ -27,6 +27,7 @@ namespace NexoDesk.Shared.Messages;
 [JsonSerializable(typeof(PairRequestMessage))]
 [JsonSerializable(typeof(PairResultMessage))]
 [JsonSerializable(typeof(FrameAckMessage))]
+[JsonSerializable(typeof(ControlStateMessage))]
 internal sealed partial class ProtocolJsonContext : JsonSerializerContext;
 
 /// <summary>Serialização das mensagens de controle (JSON UTF-8) com validação obrigatória.</summary>
@@ -50,6 +51,7 @@ public static class ProtocolJson
         [typeof(PairRequestMessage)] = MessageType.PairRequest,
         [typeof(PairResultMessage)] = MessageType.PairResult,
         [typeof(FrameAckMessage)] = MessageType.FrameAck,
+        [typeof(ControlStateMessage)] = MessageType.ControlState,
     };
 
     public static MessageType TypeOf<T>() where T : IControlMessage => TypeMap[typeof(T)];

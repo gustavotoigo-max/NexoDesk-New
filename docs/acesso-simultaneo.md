@@ -1,35 +1,33 @@
-# Revisão de acesso simultâneo
+# Acesso simultâneo — 1.5.0
 
-## Diagnóstico confirmado
+## Regra aprovada
 
-O funcionário agora aparece no console Tailscale e recebeu a mensagem de sessão ocupada do NexoDesk. A tentativa chegou ao agente e passou pela autenticação/checagem de senha antes da decisão de sessão. O bloqueio está no NexoDesk 1.4.0: SessionGate reserva uma única vaga para qualquer modo, inclusive Ver a tela.
+Até dois ADMINs autenticados podem ver a mesma tela física. Uma nova ação de mouse/teclado assume o controle remoto, sem desconectar o outro participante. O outro recupera o controle ao produzir uma nova ação. Não há desktops independentes nem alteração da resolução física.
 
-## Pontos que precisam mudar juntos
+- Movimento, clique, rolagem ou nova tecla podem transferir o controle.
+- Na transferência, teclas e botões injetados pelo ADMIN anterior são liberados. Repetições de teclas mantidas, solturas atrasadas e arrastes antigos não devem recuperar o controle; solte e pressione novamente para reiniciar um arraste.
+- Quem conecta em **Ver a tela** continua apenas observando.
+- Atividade física transfere a indicação para **Pessoa no PC REMOTO**. Um ADMIN pode recuperar com nova atividade. O teclado/mouse físicos nunca são bloqueados; modificadores mantidos fisicamente continuam sujeitos ao estado único do Windows. Não se promete isolamento absoluto quando várias pessoas atuam ao mesmo tempo.
+- A janela de sessão indica quem controla. O remoto mostra os nomes conectados e permite encerrar todos os acessos. Remover um ADMIN autorizado revoga suas sessões.
 
-- AgentHost: trocar a referência de sessão única por registro limitado de sessões; reservar/liberar vagas sem corrida e manter a opção de sessão única.
-- Imagem: cada ADMIN precisa de seu próprio histórico de blocos, sequência e confirmação. DesktopThread hoje mantém encoder/fila compartilhados; outro consumidor poderia receber somente parte das mudanças. A conexão/desconexão de um participante não pode reiniciar a imagem dos demais.
-- Entrada: separar posse de mouse/teclado e liberação de teclas. Hoje ReleaseAll usa um estado compartilhado; sair de uma sessão não pode soltar teclas de outro controlador.
-- Serviço: revogar por certificado em todas as sessões correspondentes; desligar acesso, mudar senha/rede ou sair deve encerrar todas. Cada ADMIN conserva autenticação individual por certificado e senha.
-- Interface remota: mostrar a lista de ADMINs ativos, modo e quem controla; permitir encerrar um participante ou todos. Aviso inicial continua por dez segundos.
-- Compatibilidade: novos recursos precisam ser negociados. Clientes antigos continuam funcionando no modo atual; mensagens novas não podem ser enviadas a eles.
+## Configuração e compatibilidade
 
-## Comportamento a definir
+Atualize o remoto e os dois ADMINs. Cada ADMIN usa seu certificado/pareamento individual; a senha é a do mesmo remoto. Gere um código temporário para cada novo pareamento. Todos precisam estar na mesma rede Tailscale com permissão de comunicação, ou na rede local configurada.
 
-| Modelo | Comportamento |
-| --- | --- |
-| Um controla, outro observa — recomendado | Ambos veem a mesma tela; somente o dono do controle injeta entrada. Pedido/transferência de controle aparece nas interfaces. A transferência libera teclas/botões do dono anterior antes de habilitar o próximo. |
-| Ambos controlam | Ambos veem a mesma tela e injetam entrada. O remoto tem um único cursor e foco; ações se intercalam. Teclas/botões exigem rastreamento individual para que uma desconexão não prejudique o outro. |
+**Configurações do PC REMOTO → Acesso simultâneo** fica habilitado por padrão. Desmarcar restaura a reserva de sessão única e o caminho anterior de captura/entrada. A mudança encerra as sessões existentes. O motor **Estável** continua sendo GDI/blocos Brotli sem perda; esta entrega não adiciona H.264 ou monitor virtual.
 
-A escolha foi solicitada ao usuário. Nenhum dos modelos deve ser presumido; implementação do comportamento depende dessa definição.
+A capacidade opcional `activity-control-v1` negocia a indicação de posse; clientes antigos não recebem mensagens desconhecidas. Eles ainda podem conectar, mas não mostram quem controla. Para usar/testar o recurso completo, use 1.5.0 em todos os PCs. Uma terceira conexão é recusada.
 
-## Verificações necessárias
+## Implementação e validação
 
-1. Duas conexões autenticadas e imagem completa em ambas; mudanças de um pixel continuam chegando aos dois.
-2. ADMIN lento/sem confirmar imagem não trava o outro; filas/memória permanecem limitadas.
-3. Desconectar/remover um ADMIN não encerra a sessão restante nem reinicia sua imagem.
-4. Teclas e botões são liberados corretamente na saída e na transferência, conforme o modelo escolhido.
-5. Desabilitar acesso, alterar senha/rede, sair, atualizar e parar serviço encerram todas as sessões.
-6. Recusar senha/certificado inválido, respeitar limite de participantes e preservar clientes antigos/sessão única.
-7. Confirmar teclado, nitidez em janela, 100%, tela cheia e aviso de acesso nas duas máquinas.
+Cada sessão tem seu próprio histórico de imagem, sequência, fila e confirmação. Um ADMIN lento ou desconectado não reinicia a imagem do outro. A captura continua serializada na thread do desktop, com compressão separada por participante; dois participantes aumentam o trabalho de captura/compressão.
 
-O motor Estável permanece como base. Esta revisão não instala monitor virtual e não cria desktops Windows independentes: os participantes acessam a mesma tela física.
+Um coordenador serializa entrada e rastreia teclas/botões por sessão. Um monitor nativo observa atividade física, ignora eventos injetados e acompanha o desktop de entrada. Os callbacks apenas sinalizam a transferência; não esperam pelo injetor. Se o monitor estiver indisponível, a entrada remota coordenada aguarda sua recuperação, com problema informado na interface. O modo anterior continua selecionável.
+
+Testes automatizados cobrem TLS real com duas sessões, transferência/solturas, atividade local simulada, um pixel alterado em ambas, participante lento, saída independente, limite de dois, senha inválida, observação e encerramento de todos. A instalação dos hooks no desktop real e a interação física/login/UAC ainda exigem validação em campo.
+
+## Fontes e distinção
+
+A regra acima é a escolha do usuário para o NexoDesk. A documentação pública da [barra do TeamViewer](https://www.teamviewer.com/en/global/support/knowledge-base/teamviewer-remote/remote-control/remote-session-toolbar/) descreve opções de entrada remota, mas não confirma esse algoritmo exato de arbitragem.
+
+As APIs e limites do observador seguem a Microsoft: [LowLevelKeyboardProc](https://learn.microsoft.com/en-us/windows/win32/winmsg/lowlevelkeyboardproc), [LowLevelMouseProc](https://learn.microsoft.com/en-us/windows/win32/winmsg/lowlevelmouseproc), [flags de teclado](https://learn.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-kbdllhookstruct) e [flags de mouse](https://learn.microsoft.com/en-us/windows/win32/api/winuser/ns-winuser-msllhookstruct).

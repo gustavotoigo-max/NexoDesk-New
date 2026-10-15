@@ -305,6 +305,16 @@ public sealed class SettingsViewModel : ObservableObject
     }
 
     public bool IsAdmin => _state.Config.Role == DeviceRole.Admin;
+    public bool SimultaneousAccessEnabled
+    {
+        get => _state.Config.Remote.SimultaneousAccessEnabled;
+        set
+        {
+            if (value == SimultaneousAccessEnabled) return;
+            _state.Update(c => c.Remote.SimultaneousAccessEnabled = value);
+            OnPropertyChanged();
+        }
+    }
     public bool EnhancedWindowFit
     {
         get => _state.Config.Admin.EnhancedWindowFit;

@@ -20,6 +20,7 @@ public sealed record AdminConnectOptions
     public required string AppVersion { get; init; }
     public SessionMode Mode { get; init; } = SessionMode.View;
     public string? AccessPassword { get; init; }
+    public string[] Capabilities { get; init; } = [Features.View, Features.Control, Features.DesktopTiles, Features.ActivityControl];
 
     public TimeSpan ConnectTimeout { get; init; } = TimeSpan.FromSeconds(10);
     public TimeSpan HandshakeTimeout { get; init; } = TimeSpan.FromSeconds(10);
@@ -66,6 +67,8 @@ public sealed class AdminSession : IAsyncDisposable
     public string NegotiatedProtocol => _channel.NegotiatedProtocol;
     public DisplayInfoMessage? Display { get; private set; }
     public TimeSpan? LastLatency { get; private set; }
+    public ControlStateMessage? ControlState { get; private set; }
+    public event Action<ControlStateMessage>? ControlChanged;
 
     public event Action<DisplayInfoMessage>? DisplayChanged;
     private readonly TaskCompletionSource _frameConsumerReady = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -103,7 +106,7 @@ public sealed class AdminSession : IAsyncDisposable
             sm.TransitionTo(SessionState.Authenticated);
 
             await channel.SendAsync(new HelloMessage(
-                ProtocolConstants.CurrentVersion, options.ClientId, [Features.View, Features.Control, Features.DesktopTiles], options.AppVersion), ct).ConfigureAwait(false);
+                ProtocolConstants.CurrentVersion, options.ClientId, options.Capabilities, options.AppVersion), ct).ConfigureAwait(false);
 
             Envelope ackEnv = await ReceiveAllowedAsync(channel, sm, options.HandshakeTimeout, ErrorCode.HandshakeTimeout, ct).ConfigureAwait(false);
             ThrowIfError(ackEnv);
@@ -189,6 +192,13 @@ public sealed class AdminSession : IAsyncDisposable
                 Envelope env = await ReceiveAllowedAsync(_channel, StateMachine, _options.IdleTimeout, ErrorCode.IdleTimeout, ct).ConfigureAwait(false);
                 switch (env.Type)
                 {
+                    case MessageType.ControlState:
+                        if (!Server.Features.Contains(Features.ActivityControl) || !_options.Capabilities.Contains(Features.ActivityControl))
+                            throw new ProtocolException(ErrorCode.UnexpectedMessage, "controle por atividade não anunciado");
+                        var control = ProtocolJson.Deserialize<ControlStateMessage>(env);
+                        if (ControlState is null || control.Epoch > ControlState.Epoch)
+                        { ControlState = control; ControlChanged?.Invoke(control); }
+                        break;
                     case MessageType.DisplayInfo:
                         Display = ProtocolJson.Deserialize<DisplayInfoMessage>(env);
                         DisplayChanged?.Invoke(Display);

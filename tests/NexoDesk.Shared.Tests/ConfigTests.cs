@@ -4,6 +4,12 @@ namespace NexoDesk.Shared.Tests;
 
 public class ConfigTests
 {
+    [Theory]
+    [InlineData("{\"remote\":{}}", true)]
+    [InlineData("{\"remote\":{\"simultaneousAccessEnabled\":false}}", false)]
+    public void SimultaneousAccessDefaultAndLegacyOptOutSurviveParsing(string json, bool expected)
+    { Assert.Equal(expected, ConfigStore.Parse(json).Remote.SimultaneousAccessEnabled); }
+
     private static readonly string A = new('A', 64);
     private static readonly string B = new('B', 64);
 

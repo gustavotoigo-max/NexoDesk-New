@@ -21,11 +21,12 @@ public enum MessageType : ushort
     CursorUpdate = 16,
     DesktopUpdate = 17,
     FrameAck = 18,
+    ControlState = 19,
 }
 
 public static class MessageTypeExtensions
 {
-    public static bool IsDefined(this MessageType type) => type is >= MessageType.Hello and <= MessageType.FrameAck;
+    public static bool IsDefined(this MessageType type) => type is >= MessageType.Hello and <= MessageType.ControlState;
 
     /// <summary>Maior payload aceito para o tipo. Comprimentos acima disso encerram a sessão.</summary>
     public static int MaxPayload(this MessageType type) => type switch

@@ -37,7 +37,16 @@ public class MessageTests
         RoundTrip(new PongMessage(123));
         RoundTrip(new EndSessionMessage(EndReason.UserRequested));
         RoundTrip(new ErrorMessage(ErrorCode.SessionBusy, "Ocupado."));
+        var state = new ControlStateMessage(5, "abc123", "Admin A");
+        Assert.Equal(state, RoundTrip(state));
     }
+
+    [Theory]
+    [InlineData(-1, "owner", "Admin")]
+    [InlineData(0, "", "Admin")]
+    [InlineData(0, "owner", "")]
+    public void InvalidControlStateIsRejected(long epoch, string id, string name)
+    { Assert.Throws<ProtocolException>(() => ProtocolJson.Serialize(new ControlStateMessage(epoch, id, name))); }
 
     [Fact]
     public void Enums_AreSerializedAsText()

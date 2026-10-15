@@ -85,7 +85,10 @@ public sealed class RemoteViewModel : ObservableObject, IAsyncDisposable
     public bool PairingActive => AccessCode is not null && _snapshot!.PairingExpiresAt > DateTimeOffset.UtcNow;
     public string PairingRemaining => PairingActive ? $"Expira em {Math.Max(0, (int)(_snapshot!.PairingExpiresAt - DateTimeOffset.UtcNow).TotalSeconds)} s" : "";
     public string? SessionAdmin => _snapshot?.ClientName;
-    public string? SessionDetail => HasSession ? "Sessão autenticada pelo serviço Windows." : null;
+    public string SessionHeadline => (_snapshot?.Accesses?.Length ?? 1) > 1
+        ? $"ADMINs {SessionAdmin} estão acessando este computador" : $"ADMIN {SessionAdmin} está acessando este computador";
+    public string? SessionDetail => HasSession
+        ? $"{_snapshot?.Accesses?.Length ?? 1} conexão(ões). Controle: {_snapshot?.ControlOwner ?? "por atividade"}." : null;
     public bool HasSession => _snapshot?.SessionId is not null;
     public bool HasAdmins => Admins.Count > 0;
     public string PasswordStatus => _state.Config.Remote.AccessPassword is null ? "Senha ainda não definida." : "Senha definida. Exigida em cada conexão.";
@@ -208,7 +211,7 @@ public sealed class RemoteViewModel : ObservableObject, IAsyncDisposable
     {
         foreach (string property in new[] { nameof(Status), nameof(StatusText), nameof(StatusKind), nameof(IsReady), nameof(Problem),
             nameof(HasProblem), nameof(Address), nameof(IpText), nameof(TailscaleText), nameof(AccessCode), nameof(PairingCode),
-            nameof(PairingActive), nameof(PairingRemaining), nameof(SessionAdmin), nameof(SessionDetail), nameof(HasSession), nameof(PasswordStatus), nameof(UnattendedAccess) })
+            nameof(PairingActive), nameof(PairingRemaining), nameof(SessionAdmin), nameof(SessionHeadline), nameof(SessionDetail), nameof(HasSession), nameof(PasswordStatus), nameof(UnattendedAccess) })
             OnPropertyChanged(property);
         CommandManager.InvalidateRequerySuggested();
         StatusChanged?.Invoke();

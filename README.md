@@ -8,6 +8,7 @@ Acesso remoto privado para até cinco PCs Windows x64. Um aplicativo e um instal
 - Pareamento por código temporário, certificados individuais e TLS mútuo.
 - Senha exigida a cada conexão; salva com proteção do Windows no ADMIN.
 - Monitor principal, cursor remoto, mouse, teclado, desconexão e reconexão.
+- Até dois ADMINs no mesmo remoto, com controle transferido pela atividade de mouse/teclado.
 - Aviso de acesso por dez segundos, com botão para fechar sem desconectar.
 - Blocos de tela sem perda, fila de imagem limitada e visualização a 100%.
 - Ajuste nítido à janela pela GPU, com botão Nitidez para comparar com o ajuste anterior, sem alterar o monitor remoto.
@@ -18,11 +19,11 @@ Acesso remoto privado para até cinco PCs Windows x64. Um aplicativo e um instal
 
 **Estado:** implementação e instalador disponíveis. Compilação e testes locais descritos em [validação](docs/validacao.md). Login/UAC, reinício e operação entre dois PCs ainda exigem validação real. Instalador sem assinatura Authenticode.
 
-**Versão 1.4.1**, com ajuste nítido à janela e tela cheia opcional na sessão (Ctrl+Alt+F11). Instalador e SHA-256 disponíveis no [release](https://github.com/gustavotoigo-max/NexoDesk-New/releases/tag/v1.4.1). [Plano da transmissão experimental](docs/plano-transmissao.md).
+**Versão 1.5.0**, com ajuste nítido à janela e tela cheia opcional na sessão (Ctrl+Alt+F11). Instalador e SHA-256 disponíveis no [release](https://github.com/gustavotoigo-max/NexoDesk-New/releases/tag/v1.5.0). [Plano da transmissão experimental](docs/plano-transmissao.md).
 
 ## Instalar
 
-Baixe o [instalador 1.4.1](https://github.com/gustavotoigo-max/NexoDesk-New/releases/download/v1.4.1/NexoDesk-New-Setup-1.4.1.exe) e execute nos dois computadores. A cópia local fica em **artifacts/NexoDesk-New-Setup-1.4.1.exe**. As versões 1.1.0 e 1.2.1 permanecem nos releases anteriores. O instalador inclui o runtime .NET; não é necessário baixá-lo para executar.
+Baixe o [instalador 1.5.0](https://github.com/gustavotoigo-max/NexoDesk-New/releases/download/v1.5.0/NexoDesk-New-Setup-1.5.0.exe) e execute nos dois computadores. A cópia local fica em **artifacts/NexoDesk-New-Setup-1.5.0.exe**. As versões 1.1.0 e 1.2.1 permanecem nos releases anteriores. O instalador inclui o runtime .NET; não é necessário baixá-lo para executar.
 
 1. No remoto, escolha **PC REMOTO**.
 2. Escolha **Tailscale (internet)** ou **Rede local**, selecione o IP quando necessário e aplique.
@@ -34,6 +35,8 @@ Baixe o [instalador 1.4.1](https://github.com/gustavotoigo-max/NexoDesk-New/rele
 No PC REMOTO, o **X** recolhe a janela para a bandeja. **Sair e encerrar o serviço**, no ícone perto do relógio, encerra a interface, o supervisor e o agente desta instalação; o Tailscale continua conectado. Ao abrir novamente, o serviço é iniciado. A preferência de início com o Windows é mantida. [Processos e atualização](docs/processos-atualizacao.md).
 
 No ADMIN, o ícone perto do relógio mostra um marcador quando há conexão ativa. A dica informa o remoto ou a quantidade de conexões. Duplo clique abre a janela principal; o menu permite **Encerrar todas as conexões** ou **Sair do NexoDesk New**. Fechar a janela principal do ADMIN encerra o programa.
+
+Para acesso simultâneo, atualize o PC REMOTO e os dois ADMINs para 1.5.0. Cada ADMIN deve ser pareado individualmente, com um código temporário para cada pareamento; ambos usam a senha de acesso do mesmo remoto. Os dois continuam vendo a mesma tela. Uma nova ação de mouse/teclado assume o controle; atividade física no remoto também transfere a indicação para a pessoa local. Teclas/botões do controlador remoto anterior são liberados. A entrada física permanece disponível. Em **Configurações do PC REMOTO → Acesso simultâneo**, desmarque a opção para voltar ao modo anterior de um ADMIN. Aplicar essa mudança encerra as conexões abertas. [Comportamento e limites](docs/acesso-simultaneo.md).
 
 Os campos de pareamento e senha foram ampliados; o olho revela/oculta cada senha. A interface usa seções com separadores e cantos discretos.
 

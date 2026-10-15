@@ -6,8 +6,9 @@ using NexoDesk.Shared.Messages;
 namespace NexoDesk.Desktop;
 
 public sealed record ServiceRequest(string Command);
+public sealed record ActiveAccess(string SessionId, string Name, SessionMode Mode);
 public sealed record ServiceStatus(bool Ready, string? Problem, string Address, string? SessionId, string? ClientName,
-    SessionMode? Mode, string? AccessCode, DateTimeOffset PairingExpiresAt, string[] Events);
+    SessionMode? Mode, string? AccessCode, DateTimeOffset PairingExpiresAt, string[] Events, ActiveAccess[]? Accesses = null, string? ControlOwner = null);
 
 /// <summary>IPC local limitado; o servidor concede acesso apenas a SYSTEM e administradores elevados.</summary>
 public static class ServiceProtocol

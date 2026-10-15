@@ -57,6 +57,7 @@ public sealed record RemoteSettings
     public NetworkMode NetworkMode { get; set; } = NetworkMode.Tailscale;
     public PasswordVerifier? AccessPassword { get; set; }
 
+    public bool SimultaneousAccessEnabled { get; set; } = true;
     public int ConsentTimeoutSeconds { get; set; } = 30;
     public bool StartWithWindows { get; set; } = true;
     /// <summary>Ausente nas configurações antigas: mantém a transmissão estável.</summary>

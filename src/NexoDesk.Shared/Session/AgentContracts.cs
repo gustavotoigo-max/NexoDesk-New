@@ -71,16 +71,22 @@ public interface IInputSink
     void ReleaseAll();
 }
 
-/// <summary>Garante no máximo uma sessão por máquina.</summary>
-public sealed class SessionGate
+/// <summary>Limita o número de sessões; o padrão mantém uma sessão por máquina.</summary>
+public sealed class SessionGate(int capacity = 1)
 {
+    private readonly SemaphoreSlim _slots = new(capacity, capacity);
     private int _busy;
 
-    public bool TryAcquire() => Interlocked.CompareExchange(ref _busy, 1, 0) == 0;
+    public bool TryAcquire()
+    {
+        if (!_slots.Wait(0)) return false;
+        Interlocked.Increment(ref _busy);
+        return true;
+    }
 
-    public void Release() => Volatile.Write(ref _busy, 0);
+    public void Release() { Interlocked.Decrement(ref _busy); _slots.Release(); }
 
-    public bool IsBusy => Volatile.Read(ref _busy) != 0;
+    public bool IsBusy => Volatile.Read(ref _busy) > 0;
 }
 
 /// <summary>Administradores pareados com este PC REMOTO. Pode mudar com o programa aberto.</summary>

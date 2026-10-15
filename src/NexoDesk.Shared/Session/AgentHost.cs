@@ -23,10 +23,11 @@ public sealed record AgentHostOptions
 
     /// <summary>Conexões simultâneas ainda em negociação (TLS/handshake). Excedentes são fechadas.</summary>
     public int MaxPendingConnections { get; init; } = 4;
+    public int MaxSessions { get; init; } = 1;
 }
 
 /// <summary>
-/// Servidor do Agent: escuta no endereço privado, autentica por mTLS, aceita no máximo uma sessão
+/// Servidor do Agent: escuta no endereço privado, autentica por mTLS, aceita sessões até o limite configurado
 /// e registra tudo em auditoria. Independente de Windows; a interface e a política ficam no app.
 /// </summary>
 public sealed class AgentHost : IAsyncDisposable, IPairingHandler
@@ -41,19 +42,27 @@ public sealed class AgentHost : IAsyncDisposable, IPairingHandler
     private readonly PinnedCertificateValidator _clientValidator;
     private readonly IClientStore _clients;
     private readonly ConnectionRateLimiter _rateLimiter;
-    private readonly SessionGate _gate = new();
+    private readonly SessionGate _gate;
+    private readonly Func<IFrameSource>? _frameFactory;
+    private readonly InputCoordinator? _coordinator;
+    private readonly Dictionary<string, AgentSession> _sessions = [];
     private readonly SemaphoreSlim _pending;
     private readonly CancellationTokenSource _cts = new();
     private readonly List<Task> _connections = [];
     private TcpListener? _listener;
     private Task? _acceptLoop;
-    private AgentSession? _current;
 
-    public AgentHost(AgentHostOptions options, IAgentPolicy policy, IAuditLog audit, IDisplaySource? display = null, IInputSink? input = null, IFrameSource? frames = null, ICursorSource? cursor = null)
+    public AgentHost(AgentHostOptions options, IAgentPolicy policy, IAuditLog audit, IDisplaySource? display = null, IInputSink? input = null, IFrameSource? frames = null, ICursorSource? cursor = null, Func<IFrameSource>? frameFactory = null, InputCoordinator? coordinator = null)
     {
         if (TailscaleAddress.IsWildcard(options.Endpoint.Address))
             throw new ArgumentException("O Agent não pode escutar em todas as interfaces (0.0.0.0/::).", nameof(options));
 
+        if (options.MaxSessions is < 1 or > 2) throw new ArgumentOutOfRangeException(nameof(options.MaxSessions));
+        if (options.MaxSessions > 1 && frames is not null && frameFactory is null)
+            throw new ArgumentException("Acesso simultâneo exige fontes de imagem independentes.", nameof(frameFactory));
+        _gate = new SessionGate(options.MaxSessions);
+        _frameFactory = frameFactory;
+        _coordinator = coordinator ?? (input is not null && options.MaxSessions > 1 ? new InputCoordinator(input) : null);
         _options = options;
         _policy = policy;
         _audit = audit;
@@ -71,7 +80,8 @@ public sealed class AgentHost : IAsyncDisposable, IPairingHandler
     }
 
     public IPEndPoint? LocalEndpoint => _listener?.LocalEndpoint as IPEndPoint;
-    public AgentSession? CurrentSession => Volatile.Read(ref _current);
+    public AgentSession[] Sessions { get { lock (_sessions) return _sessions.Values.ToArray(); } }
+    public AgentSession? CurrentSession => Sessions.FirstOrDefault();
     public bool IsRunning => _acceptLoop is { IsCompleted: false };
 
     public event Action<AgentSession>? SessionActivated;
@@ -89,8 +99,8 @@ public sealed class AgentHost : IAsyncDisposable, IPairingHandler
         _acceptLoop = Task.Run(() => AcceptLoopAsync(_cts.Token));
     }
 
-    /// <summary>Encerra a sessão ativa (botão local "Encerrar acesso").</summary>
-    public void EndCurrentSession(EndReason reason) => CurrentSession?.End(reason);
+    /// <summary>Encerra todas as sessões ativas (botão local "Encerrar acesso").</summary>
+    public void EndCurrentSession(EndReason reason) { foreach (var session in Sessions) session.End(reason); }
 
     private async Task AcceptLoopAsync(CancellationToken ct)
     {
@@ -139,6 +149,8 @@ public sealed class AgentHost : IAsyncDisposable, IPairingHandler
         GatedPolicy? gatePolicy = null;
         SecureChannel? channel = null;
         AgentSession? session = null;
+        IFrameSource? ownedFrames = null;
+        InputCoordinator.Peer? peer = null;
         void ReleasePending()
         {
             if (!pendingReleased)
@@ -173,16 +185,20 @@ public sealed class AgentHost : IAsyncDisposable, IPairingHandler
                 clientName: who?.Name ?? "(pareamento)", result: channel.NegotiatedProtocol);
 
             gatePolicy = new GatedPolicy(_gate, _policy);
-            session = new AgentSession(channel, who, _options.Session, gatePolicy, _audit, _display, _input, this, _frames, _cursor);
+            ownedFrames = _frameFactory?.Invoke();
+            peer = _coordinator?.CreatePeer("pending", who?.Name ?? "ADMIN");
+            session = new AgentSession(channel, who, _options.Session, gatePolicy, _audit, _display, peer ?? _input,
+                this, ownedFrames ?? _frames, _cursor, _coordinator is null ? null : () => _coordinator.State);
+            peer?.Bind(session.SessionId, session.ClientName);
             session.Activated += s =>
             {
-                Volatile.Write(ref _current, s);
+                lock (_sessions) _sessions[s.SessionId] = s;
                 ReleasePending();
                 SessionActivated?.Invoke(s);
             };
 
             SessionOutcome outcome = await session.RunAsync(ct).ConfigureAwait(false);
-            if (gatePolicy.Acquired) { Interlocked.CompareExchange(ref _current, null, session); gatePolicy.Release(); }
+            if (gatePolicy.Acquired) { lock (_sessions) _sessions.Remove(session.SessionId); gatePolicy.Release(); }
 
             if (outcome.WasAccepted)
                 SessionEnded?.Invoke(session, outcome);
@@ -199,9 +215,15 @@ public sealed class AgentHost : IAsyncDisposable, IPairingHandler
         {
             if (gatePolicy?.Acquired == true)
             {
-                Interlocked.CompareExchange(ref _current, null, session);
-                _gate.Release();
+                if (session is not null) lock (_sessions) _sessions.Remove(session.SessionId);
+                gatePolicy.Release();
             }
+            try { peer?.Dispose(); }
+            catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException or IOException)
+            { Audit(AuditEventType.ProtocolError, reason: "Falha ao liberar entrada de uma sessão."); }
+            try { (ownedFrames as IDisposable)?.Dispose(); }
+            catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException or IOException)
+            { Audit(AuditEventType.ProtocolError, reason: "Falha ao liberar captura de uma sessão."); }
             if (channel is not null) await channel.DisposeAsync().ConfigureAwait(false);
             ReleasePending();
             client.Dispose();
@@ -222,7 +244,7 @@ public sealed class AgentHost : IAsyncDisposable, IPairingHandler
     {
         if (_cts.IsCancellationRequested)
             return;
-        CurrentSession?.End(EndReason.ShuttingDown);
+        EndCurrentSession(EndReason.ShuttingDown);
         _cts.Cancel();
         _listener?.Stop();
 
@@ -246,7 +268,7 @@ public sealed class AgentHost : IAsyncDisposable, IPairingHandler
         _audit.Write(new AuditEvent(DateTimeOffset.UtcNow, type, _options.Session.ServerId,
             ClientName: clientName, ClientFingerprint: fingerprint, RemoteAddress: remote, Result: result, Reason: reason, AppVersion: _options.Session.AppVersion));
 
-    /// <summary>Reserva a vaga única de sessão antes de consultar a política; libera se a política negar.</summary>
+    /// <summary>Reserva uma vaga de sessão antes de consultar a política; libera se a política negar.</summary>
     private sealed class GatedPolicy(SessionGate gate, IAgentPolicy inner) : IAgentPolicy
     {
         public bool Acquired { get; private set; }
@@ -254,7 +276,7 @@ public sealed class AgentHost : IAsyncDisposable, IPairingHandler
         public async Task<PolicyDecision> RequestSessionAsync(SessionRequest request, CancellationToken ct)
         {
             if (!gate.TryAcquire())
-                return PolicyDecision.Deny(DenyReason.Busy, "Outro ADMIN já está acessando este PC REMOTO.");
+                return PolicyDecision.Deny(DenyReason.Busy, "O limite de ADMINs conectados a este PC REMOTO foi atingido.");
             Acquired = true;
 
             PolicyDecision decision;

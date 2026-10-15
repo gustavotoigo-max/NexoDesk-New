@@ -12,17 +12,19 @@ public sealed class DesktopThread : IDisplaySource, IInputSink, IFrameSource, IC
     private readonly BlockingCollection<Action<Exception?>> _queue = new(64);
     private readonly Thread _thread;
     private readonly GdiScreenCapture _capture;
-    private readonly SendInputSink _input = new();
+    private readonly SendInputSink _input;
     private readonly Func<int> _fps;
+    private readonly Func<int> _quality;
     private bool _disposed;
     private readonly object _tileGate = new();
     private readonly NexoDesk.Shared.Streaming.DesktopTileEncoder _tiles = new();
     private int _desktopGeneration, _encodedGeneration;
     private long _nextUpdateTicks;
 
-    public DesktopThread(Func<int> fps, Func<int> quality)
+    public DesktopThread(Func<int> fps, Func<int> quality, PhysicalInputState? physicalInput = null)
     {
-        _fps = fps;
+        _fps = fps; _quality = quality;
+        _input = new SendInputSink(physicalInput);
         _capture = new GdiScreenCapture(fps, quality);
         _thread = new Thread(Run) { IsBackground = true, Name = "NexoDesk.InputDesktop" };
         _thread.Start();
@@ -139,6 +141,68 @@ public sealed class DesktopThread : IDisplaySource, IInputSink, IFrameSource, IC
             }
         }, ct).ConfigureAwait(false);
     }
+    public IFrameSource CreateFrameSource() => new ViewerFrames(this);
+
+    private sealed class ViewerFrames : IFrameSource, IDesktopUpdateSource, IDisposable
+    {
+        private readonly DesktopThread _owner;
+        private readonly GdiScreenCapture _capture;
+        private readonly NexoDesk.Shared.Streaming.DesktopTileEncoder _encoder = new();
+        private int _captureGeneration = -1, _encodedGeneration = -1;
+        private long _nextTicks;
+        private bool _disposed;
+        public ViewerFrames(DesktopThread owner) { _owner = owner; _capture = new(owner._fps, owner._quality); }
+        private void Prepare()
+        {
+            if (_captureGeneration == _owner._desktopGeneration) return;
+            _capture.Reset(); _captureGeneration = _owner._desktopGeneration;
+        }
+        private async Task Pace(CancellationToken ct)
+        {
+            long now = System.Diagnostics.Stopwatch.GetTimestamp();
+            if (_nextTicks > now)
+                await Task.Delay(TimeSpan.FromSeconds((double)(_nextTicks - now) / System.Diagnostics.Stopwatch.Frequency), ct).ConfigureAwait(false);
+            _nextTicks = System.Diagnostics.Stopwatch.GetTimestamp() + System.Diagnostics.Stopwatch.Frequency / Math.Clamp(_owner._fps(), 1, 30);
+        }
+        public async Task<DesktopUpdate?> NextUpdateAsync(uint index, CancellationToken ct)
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            if (_encodedGeneration != Volatile.Read(ref _owner._desktopGeneration)) _encoder.Reset();
+            if (_encoder.HasPending) return _encoder.Take(index);
+            await Pace(ct).ConfigureAwait(false);
+            (ScreenSnapshot? Snapshot, int Generation) captured;
+            try
+            {
+                captured = await _owner.Invoke(() =>
+                { Prepare(); return (_capture.CapturePixels(), _captureGeneration); }).ConfigureAwait(false);
+            }
+            catch (Win32Exception) { return null; }
+            using ScreenSnapshot? snapshot = captured.Snapshot;
+            if (snapshot is null) return null;
+            return await Task.Run(() =>
+            {
+                ct.ThrowIfCancellationRequested();
+                if (_encodedGeneration != captured.Generation) { _encoder.Reset(); _encodedGeneration = captured.Generation; }
+                _encoder.Capture(snapshot.Pixels.AsSpan(0, snapshot.Width * snapshot.Height * 4), snapshot.Width, snapshot.Height,
+                    DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+                return _encoder.HasPending ? _encoder.Take(index) : null;
+            }, ct).ConfigureAwait(false);
+        }
+        public async Task<VideoFrame?> NextFrameAsync(uint index, CancellationToken ct)
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+            await Pace(ct).ConfigureAwait(false);
+            try { return await _owner.Invoke(() => { Prepare(); return _capture.Capture(index); }).ConfigureAwait(false); }
+            catch (Win32Exception) { return null; }
+        }
+        public void Reset()
+        {
+            _encoder.Reset(); _nextTicks = 0;
+            _capture.Dispose(); _captureGeneration = -1; _encodedGeneration = -1;
+        }
+        public void Dispose() { Reset(); _disposed = true; }
+    }
+
     public void Dispose()
     {
         if (_disposed) return;

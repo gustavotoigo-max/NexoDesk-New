@@ -75,6 +75,17 @@
             </StackPanel>
         </Border>
 
+        <Border Style="{DynamicResource Nx.Section}" Margin="0,0,0,14"
+                Visibility="{Binding IsAdmin, Converter={StaticResource InverseBoolToVisibility}}">
+            <StackPanel>
+                <TextBlock Style="{DynamicResource Nx.SectionLabel}" Text="ACESSO SIMULTÂNEO" />
+                <CheckBox Style="{DynamicResource Nx.Check}" Content="Permitir dois ADMINs conectados"
+                          IsChecked="{Binding SimultaneousAccessEnabled}" />
+                <TextBlock Style="{DynamicResource Nx.Hint}"
+                           Text="Quem mover o mouse, clicar ou digitar assume o controle. A pessoa neste PC também pode retomar. Desmarque para voltar ao modo anterior, com um ADMIN. Alterar esta opção encerra os acessos abertos." />
+            </StackPanel>
+        </Border>
+
         <!-- Aparência -->
         <Border Style="{DynamicResource Nx.Section}" Margin="0,0,0,14">
             <StackPanel>

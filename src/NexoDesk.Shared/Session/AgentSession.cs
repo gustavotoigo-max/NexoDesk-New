@@ -43,7 +43,8 @@ public sealed class AgentSession
     private readonly ICursorSource? _cursor;
     private readonly CancellationTokenSource _endCts = new();
     private EndReason? _localEndReason;
-    private bool _desktopUpdates;
+    private bool _desktopUpdates, _activityControl;
+    private readonly Func<ControlStateMessage>? _controlState;
     private readonly Streaming.FrameDeliveryGate _delivery = new();
 
     public AgentSession(
@@ -56,7 +57,7 @@ public sealed class AgentSession
         IInputSink? input = null,
         IPairingHandler? pairing = null,
         IFrameSource? frames = null,
-        ICursorSource? cursor = null)
+        ICursorSource? cursor = null, Func<ControlStateMessage>? controlState = null)
     {
         _channel = channel;
         _client = client;
@@ -67,6 +68,7 @@ public sealed class AgentSession
         _input = input;
         _frames = frames;
         _cursor = cursor;
+        _controlState = controlState;
         _pairing = pairing;
         StateMachine = new SessionStateMachine(SessionRole.Agent);
         SessionId = Guid.NewGuid().ToString("N")[..12];
@@ -110,6 +112,8 @@ public sealed class AgentSession
             HelloMessage helloMsg = ProtocolJson.Deserialize<HelloMessage>(hello);
             _desktopUpdates = _frames is IDesktopUpdateSource && _options.Features.Contains(Features.DesktopTiles)
                 && helloMsg.Capabilities.Contains(Features.DesktopTiles);
+            _activityControl = _controlState is not null && _options.Features.Contains(Features.ActivityControl)
+                && helloMsg.Capabilities.Contains(Features.ActivityControl);
             await _channel.SendAsync(new HelloAckMessage(
                 ProtocolConstants.CurrentVersion, _options.ServerId, _options.DisplayName, _options.Features, _options.AppVersion, passwordChallenge), token).ConfigureAwait(false);
             StateMachine.TransitionTo(SessionState.Negotiating);
@@ -262,6 +266,7 @@ public sealed class AgentSession
         // Envia os frames da tela e a posição do cursor em paralelo com a recepção de ping/entrada.
         Task framePump = _frames is not null ? FramePumpAsync(loopCts.Token) : Task.CompletedTask;
         Task cursorPump = _cursor is not null ? CursorPumpAsync(loopCts.Token) : Task.CompletedTask;
+        Task controlPump = _activityControl ? ControlPumpAsync(loopCts.Token) : Task.CompletedTask;
         try
         {
             while (true)
@@ -299,7 +304,7 @@ public sealed class AgentSession
         finally
         {
             loopCts.Cancel();
-            try { await Task.WhenAll(framePump, cursorPump).ConfigureAwait(false); }
+            try { await Task.WhenAll(framePump, cursorPump, controlPump).ConfigureAwait(false); }
             catch (Exception ex) when (ex is OperationCanceledException or IOException or ObjectDisposedException) { }
             _frames?.Reset();
         }
@@ -309,6 +314,25 @@ public sealed class AgentSession
     /// Envia a posição do cursor em alta taxa (leve), só quando muda. Desacoplado dos frames: mover
     /// o mouse não re-encoda a tela, e o ponteiro no ADMIN acompanha de perto o movimento remoto.
     /// </summary>
+    private async Task ControlPumpAsync(CancellationToken token)
+    {
+        long previous = -1;
+        try
+        {
+            while (!token.IsCancellationRequested)
+            {
+                var state = _controlState!();
+                if (state.Epoch != previous)
+                {
+                    await _channel.SendAsync(state, token).ConfigureAwait(false);
+                    previous = state.Epoch;
+                }
+                await Task.Delay(100, token).ConfigureAwait(false);
+            }
+        }
+        catch (Exception ex) when (ex is OperationCanceledException or IOException or ObjectDisposedException or ProtocolException) { }
+    }
+
     private async Task CursorPumpAsync(CancellationToken token)
     {
         const int hz = 60;

@@ -45,6 +45,8 @@ public sealed class SessionViewModel : ObservableObject
     private string _latencyText = "—";
     private string _fpsText = "0";
     private bool _ended;
+    private string? _lastControlOwner;
+    private bool _presentationDetached;
     private string _endReason = "";
     private string _displayText = "aguardando";
     private double _cursorX;
@@ -65,13 +67,10 @@ public sealed class SessionViewModel : ObservableObject
         _session.FrameReceived += OnFrame;
         _session.AttachDesktopConsumer(OnDesktopUpdateAsync);
         _session.CursorMoved += OnCursor;
+        _lastControlOwner = _session.ControlState?.OwnerId;
+        _session.ControlChanged += OnControlChanged;
         _session.Ended += reason => _dispatcher.InvokeAsync(() => OnEnded(reason));
-        _main.ShowRemotePointerChanged += () => _dispatcher.InvokeAsync(() =>
-        {
-            OnPropertyChanged(nameof(ShowRemotePointer));
-            OnPropertyChanged(nameof(ShowCursorOverlay));
-            CursorChanged?.Invoke();
-        });
+        _main.ShowRemotePointerChanged += OnPointerPreferenceChanged;
 
         if (_session.Display is { } display)
             _displayText = $"{display.Width} × {display.Height} · escala {display.DpiScale:0.##}";
@@ -91,6 +90,32 @@ public sealed class SessionViewModel : ObservableObject
         _ = Task.Run(() => InputPumpAsync(_inputCts.Token));
     }
 
+    private void OnControlChanged(ControlStateMessage state) => _dispatcher.InvokeAsync(() =>
+    {
+        if (_presentationDetached || _session.ControlState?.Epoch != state.Epoch) return;
+        bool wasOwner = _lastControlOwner == SessionId;
+        _lastControlOwner = state.OwnerId;
+        OnPropertyChanged(nameof(ControlStatus));
+        if (wasOwner && state.OwnerId != SessionId)
+        {
+            lock (_inputLock) { _pendingMove = null; _inputEvents.Clear(); }
+            ControlLost?.Invoke();
+        }
+    });
+
+    private void OnPointerPreferenceChanged() => _dispatcher.InvokeAsync(() =>
+    {
+        if (_presentationDetached) return;
+        OnPropertyChanged(nameof(ShowRemotePointer)); OnPropertyChanged(nameof(ShowCursorOverlay)); CursorChanged?.Invoke();
+    });
+
+    internal void DetachPresentation()
+    {
+        _presentationDetached = true;
+        _session.ControlChanged -= OnControlChanged;
+        _main.ShowRemotePointerChanged -= OnPointerPreferenceChanged;
+    }
+
     public MachineViewModel Machine { get; }
     public string Title => Machine.DisplayName;
     public string Tagline => Machine.Address;
@@ -107,6 +132,11 @@ public sealed class SessionViewModel : ObservableObject
     public ICommand CloseCommand { get; }
 
     /// <summary>Conexão em streaming, inclusive no modo Ver a tela.</summary>
+    public event Action? ControlLost;
+    public string ControlStatus => IsEnded ? "Conexão encerrada" : _session.ControlState is not { } owner ? ModeText
+        : owner.OwnerId == SessionId ? "Você controla — outra atividade pode assumir"
+        : owner.OwnerId == "none" ? (_session.Accepted.Mode == SessionMode.Control ? "Mova o mouse ou digite para assumir" : "Somente visualização")
+        : $"Controle: {owner.OwnerName}" + (_session.Accepted.Mode == SessionMode.Control ? " — mova ou digite para assumir" : "");
     public bool IsActive => !IsEnded && _session.StateMachine.State == SessionState.Streaming;
     /// <summary>Verdadeiro quando a sessão é de controle e está ativa (envia mouse/teclado).</summary>
     public bool CanControl => _session.CanControl && !IsEnded;
@@ -407,6 +437,7 @@ public sealed class SessionViewModel : ObservableObject
         FpsText = "0";
         EndReason = reason;
         IsEnded = true;
+        OnPropertyChanged(nameof(ControlStatus));
         try { _inputCts.Cancel(); } catch (ObjectDisposedException) { }
         _main.OnSessionEnded(Machine, SessionId, reason);
     }

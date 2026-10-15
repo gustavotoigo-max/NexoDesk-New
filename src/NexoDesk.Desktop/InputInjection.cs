@@ -9,7 +9,7 @@ namespace NexoDesk.Desktop;
 /// convertidas para a tela primária; o teclado usa scan codes para independer do layout.
 /// Mantém o controle de botões/teclas pressionados para soltar tudo ao fim da sessão (ReleaseAll).
 /// </summary>
-public sealed class SendInputSink : IInputSink
+public sealed class SendInputSink(PhysicalInputState? physicalInput = null) : IInputSink
 {
     private readonly object _gate = new();
     private readonly HashSet<(ushort ScanCode, bool Extended)> _keysDown = [];
@@ -46,6 +46,7 @@ public sealed class SendInputSink : IInputSink
             case PointerAction.Move:
                 break;
         }
+        if (pointer.Action == PointerAction.Up && physicalInput?.IsDown(pointer.Button) == true) flag = 0;
         if (flag != 0)
             inputs.Add(Mouse(flag, ax, ay, data));
 
@@ -62,6 +63,7 @@ public sealed class SendInputSink : IInputSink
             else
                 _keysDown.Add((key.ScanCode, key.IsExtended));
         }
+        if (up && physicalInput?.IsDown(key.ScanCode, key.IsExtended) == true) return;
         Send([KeyScan(key.ScanCode, key.IsExtended, up)]);
     }
 
@@ -71,10 +73,10 @@ public sealed class SendInputSink : IInputSink
         lock (_gate)
         {
             foreach (var sc in _keysDown)
-                inputs.Add(KeyScan(sc.ScanCode, sc.Extended, up: true));
+                if (physicalInput?.IsDown(sc.ScanCode, sc.Extended) != true) inputs.Add(KeyScan(sc.ScanCode, sc.Extended, up: true));
             _keysDown.Clear();
             foreach (PointerButton b in _buttonsDown)
-                inputs.Add(Mouse(UpFlag(b), 0, 0, 0));
+                if (physicalInput?.IsDown(b) != true) inputs.Add(Mouse(UpFlag(b), 0, 0, 0));
             _buttonsDown.Clear();
         }
         if (inputs.Count > 0)

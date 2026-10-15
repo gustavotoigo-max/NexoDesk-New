@@ -165,6 +165,8 @@ public class UiRenderTests
 
     public sealed class PreviewSettings
     {
+        public bool IsAdmin => false;
+        public bool SimultaneousAccessEnabled { get; set; } = true;
         public string DeviceName { get; set; } = "PC de testes";
         public string RoleText => "PC REMOTO — pode ser acessado pelo ADMIN";
         public string SwitchRoleText => "Mudar para ADMIN";

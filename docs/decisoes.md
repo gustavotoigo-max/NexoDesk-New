@@ -24,11 +24,11 @@
 - Na 1.4.0, primeira abertura pelo instalador herda elevação; saída explícita na bandeja encerra os processos desta instalação, preservando Tailscale e preferência de início no Windows. Atualização/desinstalação conferem caminhos e PIDs e encerram também supervisor/agente; recuperação do serviço suspensa durante término forçado.
 - Interface com menos cartões, seções separadas por linhas, raios de 4/6 px, campos maiores no pareamento e senhas com olho. Motor de transmissão permanece Estável.
 - Na 1.4.1, ADMIN também tem ícone na bandeja: marcador de conexão ativa, dica com remoto/quantidade, reabertura da janela, encerramento de conexões e saída. Fechar o ADMIN continua encerrando o programa; somente o X do REMOTO recolhe para a bandeja.
-- Acesso simultâneo revisado em docs/acesso-simultaneo.md: trava de sessão única confirmada após funcionário entrar no Tailscale. Implementação aguarda escolha entre um controlador com observadores/transferência e controle por ambos.
+- Na 1.5.0, até dois ADMINs veem o mesmo remoto. Regra aprovada: nova atividade transfere o controle, inclusive atividade física, sem desconectar observadores. Teclas/botões anteriores são liberados; hardware local não é bloqueado. Configuração remota restaura o modo anterior de um ADMIN. Validação física/UAC permanece pendente; detalhes em docs/acesso-simultaneo.md.
 - Plano da evolução em docs/plano-transmissao.md: instrumentação, envio limitado, DXGI e H.264, mantendo o Estável como padrão.
 - Instalação separada da antiga: novo AppId, Program Files\NexoDesk New e ProgramData\NexoDesk-New.
 - Não há migração silenciosa de certificados, senhas ou pareamentos.
 - Configuração permanece desabilitada até definir senha e habilitar acesso.
 - Código temporário pareia uma vez; endereço e certificado ficam no catálogo para conexões posteriores.
 
-Usuário autorizou publicar código e release 1.1.0 e, depois, as melhorias acumuladas no release 1.2.1 no GitHub. A 1.2.0 foi uma entrega local intermediária; a publicação 1.2.1 reuniu essas melhorias; versão atual 1.4.1. Cada nova versão enviada à main deve gerar um release. Testes de aceitação em duas máquinas permanecem pendentes. Consulte [validação](validacao.md) antes de depender do serviço em login/UAC/reinício.
+Usuário autorizou publicar código e release 1.1.0 e, depois, as melhorias acumuladas no release 1.2.1 no GitHub. A 1.2.0 foi uma entrega local intermediária; a publicação 1.2.1 reuniu essas melhorias; versão atual 1.5.0. Cada nova versão enviada à main deve gerar um release. Testes de aceitação em duas máquinas permanecem pendentes. Consulte [validação](validacao.md) antes de depender do serviço em login/UAC/reinício.
