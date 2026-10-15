@@ -99,6 +99,9 @@
                     <TextBlock Text="{Binding ConnectionDetail}" Style="{DynamicResource Nx.Hint}" />
                     <TextBlock Text="{Binding DisplayText}" Style="{DynamicResource Nx.Hint}" />
                     <TextBlock Text="{Binding FitStatus, ElementName=RemoteImage}" Style="{DynamicResource Nx.Hint}" />
+                    <CheckBox x:Name="AutomaticPan" Style="{DynamicResource Nx.Check}" Content="Mover imagem nas bordas (100%)"
+                              IsChecked="True" Click="OnAutomaticPanChanged" Margin="0,12,0,0" />
+                    <TextBlock Style="{DynamicResource Nx.Hint}" Text="Mantém os pixels originais. Aproxime o mouse da borda para ver o topo ou a base. Desmarque para usar barras de rolagem." />
                     <Button x:Name="InfoCloseButton" Content="Concluir" Style="{DynamicResource Nx.Button.Small}" HorizontalAlignment="Right" Margin="0,12,0,0" Click="OnCloseInfo" />
                 </StackPanel>
             </Border>

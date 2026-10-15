@@ -17,4 +17,6 @@
 
 - 1.7.0: viewer abre maximizado na área útil, com barra do Windows disponível e 100% inicial. Barras superior/inferior removidas; controles semitransparentes recolhíveis sobre a imagem. Informações na principal/Info. Preservar pixels originais; rolagem continua quando a imagem superar a área física disponível. Janela de ferramentas separada fica como alternativa futura se o usuário não aprovar a sobreposição.
 
-Versão atual 1.7.0. Compilação e 259 testes locais aprovados; validação física, login/UAC e uso prolongado entre PCs permanecem pendentes. Consulte docs/validacao.md. Sem áudio, arquivos, clipboard, múltiplos monitores ou Ctrl+Alt+Del sintetizado.
+- 1.7.1: usuário confirmou que a barra oculta era a do remoto. Em 100%, abrir pela base e deslocar a imagem pelas bordas, sem redução nem mudanças no monitor remoto. Rolagem manual opcional em Info. O pan não injeta entrada nem disputa controle; dois desktops inteiros podem exceder a área física disponível.
+
+Versão atual 1.7.1. Compilação e 267 testes locais aprovados; validação física, login/UAC e uso prolongado entre PCs permanecem pendentes. Consulte docs/validacao.md. Sem áudio, arquivos, clipboard, múltiplos monitores ou Ctrl+Alt+Del sintetizado.

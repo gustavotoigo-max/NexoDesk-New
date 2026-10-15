@@ -27,6 +27,12 @@ public partial class SessionWindow : NxWindow
     private WindowChrome? _previousChrome;
     private bool _fullScreenShortcutDown;
     private bool _controlsShortcutDown;
+    private readonly System.Windows.Threading.DispatcherTimer _panTimer = new() { Interval = TimeSpan.FromMilliseconds(25) };
+    private long _lastPanTick;
+    private int _positionedWidth, _positionedHeight;
+    private bool _wasActualSize, _bottomQueued, _panning;
+    private bool _bottomAnchored = true;
+    private Point? _lastPointerViewportPosition;
     private bool _positioningFullScreen;
     private WindowPlacement _previousPlacement;
     private bool _hasPreviousPlacement;
@@ -38,8 +44,11 @@ public partial class SessionWindow : NxWindow
         {
             if (!ControlsOverlay.IsMouseOver && !SharpnessPopup.IsOpen && !InfoPopup.IsOpen) HideControls();
         };
-        Loaded += (_, _) => _controlsTimer.Start();
-        Closed += (_, _) => _controlsTimer.Stop();
+        Loaded += (_, _) => { _controlsTimer.Start(); RevealRemoteTaskbar(); };
+        Closed += (_, _) => { _controlsTimer.Stop(); _panTimer.Stop(); };
+        _panTimer.Tick += (_, _) => PanViewport();
+        Deactivated += (_, _) => _panTimer.Stop();
+        RemoteImage.MouseLeave += (_, _) => _panTimer.Stop();
     }
 
     public SessionWindow(SessionViewModel vm) : this()
@@ -198,6 +207,7 @@ public partial class SessionWindow : NxWindow
             }
         }
         ApplyScale();
+        RevealRemoteTaskbar();
         UpdateCursorOverlay();
         RestoreRemoteKeyboardFocus();
     }
@@ -314,16 +324,72 @@ public partial class SessionWindow : NxWindow
     {
         if (e.Key == Key.Escape) { SharpnessPopup.IsOpen = false; e.Handled = true; }
     }
-    private void OnVideoScroll(object sender, ScrollChangedEventArgs e) { if (_vm is not null) UpdateCursorOverlay(); }
+    private void OnVideoScroll(object sender, ScrollChangedEventArgs e)
+    {
+        bool keepBottom = !_panning && _bottomAnchored && e.ViewportHeightChange != 0;
+        _bottomAnchored = VideoScroll.ScrollableHeight - VideoScroll.VerticalOffset < 1;
+        if (keepBottom && ActualScale.IsChecked == true) RevealRemoteTaskbar();
+        if (_vm is not null) UpdateCursorOverlay();
+    }
     private void ApplyScale()
     {
         bool actual = ActualScale.IsChecked == true;
         RemoteImage.ActualSize = actual;
         var dpi = System.Windows.Media.VisualTreeHelper.GetDpi(this);
-        RemoteImage.Width = actual ? _vm.RemoteWidth / dpi.DpiScaleX : double.NaN;
-        RemoteImage.Height = actual ? _vm.RemoteHeight / dpi.DpiScaleY : double.NaN;
-        VideoScroll.HorizontalScrollBarVisibility = actual ? ScrollBarVisibility.Auto : ScrollBarVisibility.Disabled;
-        VideoScroll.VerticalScrollBarVisibility = actual ? ScrollBarVisibility.Auto : ScrollBarVisibility.Disabled;
+        int width = _vm.RemoteWidth, height = _vm.RemoteHeight;
+        RemoteImage.Width = actual ? width / dpi.DpiScaleX : double.NaN;
+        RemoteImage.Height = actual ? height / dpi.DpiScaleY : double.NaN;
+        var scroll = AutomaticPan.IsChecked == true ? ScrollBarVisibility.Hidden : ScrollBarVisibility.Auto;
+        VideoScroll.HorizontalScrollBarVisibility = actual ? scroll : ScrollBarVisibility.Disabled;
+        VideoScroll.VerticalScrollBarVisibility = actual ? scroll : ScrollBarVisibility.Disabled;
+        if (actual && (!_wasActualSize || width != _positionedWidth || height != _positionedHeight)) RevealRemoteTaskbar();
+        _positionedWidth = width; _positionedHeight = height; _wasActualSize = actual;
+        if (!actual) _panTimer.Stop();
+    }
+
+    /// <summary>O primeiro enquadramento prioriza a barra remota sem reduzir a imagem.</summary>
+    internal void RevealRemoteTaskbar()
+    {
+        if (_bottomQueued) return;
+        _bottomQueued = true;
+        Dispatcher.InvokeAsync(() =>
+        {
+            _bottomQueued = false;
+            if (ActualScale.IsChecked != true || !IsLoaded) return;
+            PositionRemoteBottom();
+        }, System.Windows.Threading.DispatcherPriority.Loaded);
+    }
+    internal void PositionRemoteBottom()
+    {
+        if (ActualScale.IsChecked != true) return;
+        VideoScroll.UpdateLayout(); VideoScroll.ScrollToBottom(); VideoScroll.ScrollToLeftEnd(); VideoScroll.UpdateLayout();
+        if (_vm is not null) UpdateCursorOverlay();
+    }
+    private void OnAutomaticPanChanged(object sender, RoutedEventArgs e)
+    { _panTimer.Stop(); ApplyScale(); RevealRemoteTaskbar(); RestoreRemoteKeyboardFocus(); }
+
+    private void PanViewport()
+    {
+        if (_vm is null || !IsActive || ActualScale.IsChecked != true || AutomaticPan.IsChecked != true ||
+            !RemoteImage.IsMouseOver || SharpnessPopup.IsOpen || InfoPopup.IsOpen ||
+            _buttonsDown.Count > 0 || _handoffButtons.Count > 0 || _keysDown.Count > 0)
+        { _panTimer.Stop(); return; }
+        long now = System.Diagnostics.Stopwatch.GetTimestamp();
+        double seconds = System.Diagnostics.Stopwatch.GetElapsedTime(_lastPanTick, now).TotalSeconds;
+        _lastPanTick = now;
+        Point pointer = Mouse.GetPosition(VideoScroll);
+        double x = Services.ViewportPan.Advance(VideoScroll.HorizontalOffset, VideoScroll.ScrollableWidth, pointer.X, VideoScroll.ViewportWidth, seconds);
+        double y = Services.ViewportPan.Advance(VideoScroll.VerticalOffset, VideoScroll.ScrollableHeight, pointer.Y, VideoScroll.ViewportHeight, seconds);
+        if (Math.Abs(x - VideoScroll.HorizontalOffset) < 0.01 && Math.Abs(y - VideoScroll.VerticalOffset) < 0.01)
+        { _panTimer.Stop(); return; }
+        _panning = true;
+        try
+        {
+            VideoScroll.ScrollToHorizontalOffset(x); VideoScroll.ScrollToVerticalOffset(y);
+            VideoScroll.UpdateLayout(); UpdateCursorOverlay();
+        }
+        finally { _panning = false; }
+        // Deslocar a câmera não deve injetar entrada nem disputar controle com outro ADMIN.
     }
 
     private static PointerButton Button(MouseButton b) => b switch
@@ -336,6 +402,13 @@ public partial class SessionWindow : NxWindow
 
     private void OnMouseMove(object sender, MouseEventArgs e)
     {
+        if (_panning) return;
+        Point viewportPosition = e.GetPosition(VideoScroll);
+        // Layout pode gerar MouseMove sem atividade física; não retomar o controle por isso.
+        if (_lastPointerViewportPosition == viewportPosition) return;
+        _lastPointerViewportPosition = viewportPosition;
+        if (ActualScale.IsChecked == true && AutomaticPan.IsChecked == true && !_panTimer.IsEnabled)
+        { _lastPanTick = System.Diagnostics.Stopwatch.GetTimestamp(); _panTimer.Start(); }
         _handoffButtons.RemoveWhere(button => button switch
         {
             PointerButton.Left => e.LeftButton != MouseButtonState.Pressed,

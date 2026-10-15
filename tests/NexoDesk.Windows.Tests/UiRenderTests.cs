@@ -126,6 +126,23 @@ public class UiRenderTests
                     using (var file = File.Create(Path.Combine(output, $"session-collapsed-{suffix}.png"))) collapsedPng.Save(file);
                     viewer.ShowControls(); sessionContent.UpdateLayout();
                     Assert.Equal(Visibility.Collapsed, ((Button)viewer.FindName("CollapsedControls")).Visibility);
+                    // Mesmo monitor, mas a barra local retira 40 px: priorizar a base remota sem reduzir os pixels.
+                    var viewport = (ScrollViewer)viewer.FindName("VideoScroll");
+                    viewport.HorizontalScrollBarVisibility = ScrollBarVisibility.Hidden;
+                    viewport.VerticalScrollBarVisibility = ScrollBarVisibility.Hidden;
+                    var viewportHost = (Border)sessionContent.Parent;
+                    viewportHost.Measure(new Size(1280,680)); viewportHost.Arrange(new Rect(0,0,1280,680)); viewportHost.UpdateLayout();
+                    Assert.Equal(680, viewport.ViewportHeight);
+                    Assert.Equal(40, viewport.ScrollableHeight);
+                    viewer.PositionRemoteBottom();
+                    Assert.Equal(40, viewport.VerticalOffset, 2);
+                    Assert.Equal(720, image.Layout.PixelHeight);
+                    Assert.Equal(1280, image.Layout.PixelWidth);
+                    Assert.True(image.Layout.TryNormalize(viewport.TranslatePoint(new Point(600,679),image), out _, out double bottomY));
+                    Assert.True(bottomY > 0.99); // último pixel/base acessível, incluindo a barra remota
+                    var bottomImage = new RenderTargetBitmap(1280,680,96,96,PixelFormats.Pbgra32); bottomImage.Render(sessionContent);
+                    var bottomPng = new PngBitmapEncoder(); bottomPng.Frames.Add(BitmapFrame.Create(bottomImage));
+                    using (var file = File.Create(Path.Combine(output, $"session-taskbar-{suffix}.png"))) bottomPng.Save(file);
                     viewer.Close();
                     stage = "diálogos " + suffix;
                     var pair = new AddComputerWindow();
