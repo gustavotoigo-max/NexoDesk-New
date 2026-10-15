@@ -98,6 +98,12 @@
                         </Grid>
                     </Border>
                     <ControlTemplate.Triggers>
+                        <Trigger Property="ShowTitleBar" Value="False">
+                            <Setter TargetName="CaptionRow" Property="Height" Value="0" />
+                            <Setter TargetName="AccentRow" Property="Height" Value="0" />
+                            <Setter TargetName="TitleBar" Property="Visibility" Value="Collapsed" />
+                            <Setter TargetName="AccentLine" Property="Visibility" Value="Collapsed" />
+                        </Trigger>
                         <Trigger Property="IsFullScreen" Value="True">
                             <Setter TargetName="CaptionRow" Property="Height" Value="0" />
                             <Setter TargetName="AccentRow" Property="Height" Value="0" />

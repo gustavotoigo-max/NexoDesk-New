@@ -2,7 +2,7 @@
 
 ## Executado localmente
 
-- Compilação Release sem erros/avisos; 259 testes aprovados na 1.6.0 (160 unitários, 37 de integração e 62 Windows).
+- Compilação Release sem erros/avisos; 259 testes aprovados na 1.7.0 (160 unitários, 37 de integração e 62 Windows).
 - Framing, mensagens, estados, certificados e configuração.
 - TLS mútuo real em loopback, pareamento, streaming, sessão única e duas sessões simultâneas.
 - Duas imagens independentes com alteração de um pixel, participante lento sem bloquear o outro, terceira conexão recusada/vaga reutilizada, saída independente, senha inválida, observador sem entrada e encerramento de todos.
@@ -14,6 +14,7 @@
 - Rede local privada e rejeição de IP público/wildcard.
 - DPAPI, manifesto requireAdministrator e estruturas Win32 x64.
 - Renderização de temas claro/escuro e prévia das configurações sem abrir acesso remoto. A prévia é gerada sem janela nativa; temporizador e botões do aviso ainda exigem teste na sessão interativa real. Tentativas de validar o aviso com janela/loop de mensagens travaram no ambiente de teste; não repetir esse método fora de uma sessão interativa.
+- Viewer sem barras: 100% inicial, janela maximizada normal (sem Topmost/tela cheia), caption zero, imagem 1280×720 ocupando a área sem linhas reservadas, controles expandidos/recolhidos sem alterar dimensões, renderizados nos dois temas. Verificação de geometria sem HWND não confirma a barra do Windows ou arraste real.
 - Template real da moldura: título e rodapé preservados no modo normal e ocultos em tela cheia. O usuário confirmou funcionamento perfeito da tela cheia no seu teste; não especificou cobertura de atalhos, restauração, DPI misto ou monitores secundários.
 - Reconstrução sem perda, detecção de um pixel, lotes limitados, descompressão com tamanho exato e confirmação por índice.
 - Entrada durante apresentação bloqueada em TLS real; primeira imagem entregue após criação do consumidor.
@@ -32,7 +33,7 @@
 
 CI inicialmente encontrou uma corrida no teste de mouse/teclado: fechar o TLS logo após enviar não confirma processamento remoto. O fixture agora sinaliza a entrada recebida antes do encerramento, mantendo a verificação de ordem e liberação de teclas; código de sessão/transmissão preservado.
 
-TRX em tests/*/TestResults. Log final da entrega em artifacts/build-1.6.0.log.
+TRX em tests/*/TestResults. Log final da entrega em artifacts/build-1.7.0.log.
 
 ## Confirmado pelo usuário
 
@@ -59,6 +60,7 @@ O ambiente de execução do desenvolvimento não tem token elevado do Windows. N
 - [ ] Bloquear/desbloquear, atravessar UAC e controlar aplicativos elevados.
 - [ ] Confirmar aviso de dez segundos, Fechar aviso sem desconectar, estado na bandeja, aviso sem UI e corte local.
 - [ ] Cobertura adicional de teclado: alternar Nitidez/100%, entrar/sair de tela cheia, Alt+Tab, teclas de navegação e atalhos no remoto.
+- [ ] Janela 1.7.0: confirmar barra do Windows disponível, 100% sem suavização, ganho de área, recolher/expandir controles, Ctrl+Alt+Home, arraste, minimizar/restaurar e retorno à principal. Repetir com DPI misto/monitores secundários e ir/voltar da tela cheia. Confira também Info e lista de sessões ativas (estatísticas/remoção ao encerrar).
 - [ ] Conferir painel Nitidez: arrastar 0–100, Esc/Concluir/clique fora, restauração do foco e teclado remoto, salvar/reabrir, preferência nas sessões abertas e uso prolongado de texto.
 - [ ] Comparar ajuste nítido/anterior em texto, planilhas e movimento nos PCs; redimensionar, mudar DPI/monitor, minimizar/restaurar e alternar 100%.
 - [ ] Cobertura adicional de tela cheia: restauração da janela, Alt+Tab, Ctrl+Alt+F11 e F11 remoto, DPI misto e monitor secundário.
@@ -69,4 +71,4 @@ O ambiente de execução do desenvolvimento não tem token elevado do Windows. N
 
 GDI/blocos Brotli sem perda implementados; JPEG permanece para negociação com versões antigas. DXGI/H.264 e medições em redes reais não foram executados. Conteúdo protegido pode não ser capturado. Sem Ctrl+Alt+Del, áudio, arquivos, clipboard ou múltiplos monitores.
 
-Instalador 1.6.0 sem assinatura, com runtime e SHA-256 verificados; publicação no GitHub pelo workflow de compilação, testes e release. Instaladores 1.1.0, 1.2.0 e 1.2.1 preservados. Novo motor experimental não implementado nesta entrega.
+Instalador 1.7.0 sem assinatura, com runtime e SHA-256 verificados; publicação no GitHub pelo workflow de compilação, testes e release. Instaladores 1.1.0, 1.2.0 e 1.2.1 preservados. Novo motor experimental não implementado nesta entrega.

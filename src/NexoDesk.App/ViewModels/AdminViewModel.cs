@@ -52,11 +52,22 @@ public sealed class AdminViewModel : ObservableObject
         CancelConnectCommand = new RelayCommand(() => _connectCts?.Cancel(), () => IsConnecting);
         ClearLogCommand = new RelayCommand(() => Log.Clear(), () => Log.Count > 0);
 
+        Sessions.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasActiveSessions));
+        OpenSessionCommand = new RelayCommand(p =>
+        {
+            var window = Application.Current.Windows.OfType<SessionWindow>().FirstOrDefault(w => ReferenceEquals(w.DataContext, p));
+            if (window is null) return;
+            window.Show(); if (window.WindowState == WindowState.Minimized) window.WindowState = WindowState.Normal;
+            window.Activate();
+        });
         LoadMachines();
     }
 
     public ObservableCollection<MachineViewModel> Machines { get; } = [];
     public ObservableCollection<LogLine> Log { get; } = [];
+    public ObservableCollection<SessionViewModel> Sessions { get; } = [];
+    public bool HasActiveSessions => Sessions.Count > 0;
+    public ICommand OpenSessionCommand { get; }
 
     public ICommand AddComputerCommand { get; }
     public ICommand CheckAllCommand { get; }
@@ -281,7 +292,9 @@ public sealed class AdminViewModel : ObservableObject
             SetStatus($"Conectado a {machine.DisplayName}.", "Done");
             AddLog(LogLevel.Ok, $"{machine.DisplayName}: acesso aceito · {session.NegotiatedProtocol}.");
             Audit(AuditEventType.SessionStarted, machine, sessionId: session.Accepted.SessionId);
-            new SessionWindow(new SessionViewModel(session, machine, this)).Show();
+            var viewer = new SessionViewModel(session, machine, this);
+            Sessions.Add(viewer);
+            new SessionWindow(viewer).Show();
             ActiveSessionsChanged?.Invoke();
         }
         catch (OperationCanceledException)
@@ -329,6 +342,7 @@ public sealed class AdminViewModel : ObservableObject
 
     internal void OnSessionEnded(MachineViewModel machine, string sessionId, string reason)
     {
+        foreach (var viewer in Sessions.Where(s => s.SessionId == sessionId).ToArray()) Sessions.Remove(viewer);
         machine.Status = MachineStatus.Unknown;
         AddLog(LogLevel.Info, $"{machine.DisplayName}: {reason}");
         Audit(AuditEventType.SessionEnded, machine, sessionId: sessionId, reason: reason);

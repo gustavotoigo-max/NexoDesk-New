@@ -11,19 +11,72 @@
              Title="{Binding Title}"
              Tagline="{Binding Tagline}"
              Width="1280" Height="800" MinWidth="640" MinHeight="420"
-             WindowStartupLocation="CenterScreen">
+             WindowStartupLocation="CenterScreen" WindowState="Maximized" ShowTitleBar="False" ShowFooter="False">
+    <WindowChrome.WindowChrome>
+        <!-- Sem faixa de caption invisível sobre os primeiros pixels remotos. Maximização normal preserva a barra do Windows. -->
+        <WindowChrome CaptionHeight="0" ResizeBorderThickness="6" GlassFrameThickness="0" CornerRadius="0" UseAeroCaptionButtons="False" />
+    </WindowChrome.WindowChrome>
 
-    <ui:NxWindow.TitleBarContent>
-        <StackPanel Orientation="Horizontal">
-            <ui:NxBadge Kind="{Binding StateKind}" ShowDot="True" Content="{Binding StateText}" Margin="0,0,12,0" />
-            <TextBlock VerticalAlignment="Center" Foreground="{DynamicResource Nx.OnNavyMuted}" FontSize="12" Margin="0,0,12,0">
-                <Run Text="Latência" /> <Run Text="{Binding LatencyText, Mode=OneWay}" Foreground="{DynamicResource Nx.OnNavy}" />
-                <Run Text="  ·  FPS" /> <Run Text="{Binding FpsText, Mode=OneWay}" Foreground="{DynamicResource Nx.OnNavy}" />
-                <Run Text="  ·  " /><Run Text="{Binding DataRateText, Mode=OneWay}" Foreground="{DynamicResource Nx.OnNavy}" />
-            </TextBlock>
-            <ToggleButton x:Name="ActualScale" Content="100%" ToolTip="Mostrar pixels em tamanho real; desmarque para ajustar à janela." Click="OnToggleScale" Margin="0,0,8,0" Padding="10,4" />
-            <Button x:Name="SharpnessButton" Style="{DynamicResource Nx.Button.Navy}" Content="Nitidez" Click="OnOpenSharpness"
-                    ToolTip="Ajustar a nitidez da imagem de 0 a 100%, com prévia imediata." Margin="0,0,8,0" Padding="10,4" />
+    <Grid x:Name="SessionCanvas" Background="#05070C" ClipToBounds="True">
+        <Grid.Resources>
+            <Style x:Key="OverlayButton" TargetType="Button">
+                <Setter Property="Foreground" Value="White" /><Setter Property="Background" Value="#86101D31" />
+                <Setter Property="FontSize" Value="12" /><Setter Property="Padding" Value="9,7" /><Setter Property="Margin" Value="2" />
+                <Setter Property="Focusable" Value="False" /><Setter Property="Cursor" Value="Hand" />
+                <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button">
+                    <Border x:Name="ButtonBorder" Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="ButtonBorder" Property="Background" Value="#F01E3554" /></Trigger>
+                        <Trigger Property="IsPressed" Value="True"><Setter TargetName="ButtonBorder" Property="Background" Value="#FF2860A0" /></Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate></Setter.Value></Setter>
+            </Style>
+            <Style x:Key="OverlayToggle" TargetType="ToggleButton">
+                <Setter Property="Foreground" Value="White" /><Setter Property="Background" Value="#86101D31" />
+                <Setter Property="FontSize" Value="12" /><Setter Property="Padding" Value="9,7" /><Setter Property="Margin" Value="2" />
+                <Setter Property="Focusable" Value="False" /><Setter Property="Cursor" Value="Hand" />
+                <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ToggleButton">
+                    <Border x:Name="ButtonBorder" Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsChecked" Value="True"><Setter TargetName="ButtonBorder" Property="Background" Value="#C02860A0" /></Trigger>
+                        <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="ButtonBorder" Property="Background" Value="#F01E3554" /></Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate></Setter.Value></Setter>
+            </Style>
+        </Grid.Resources>
+        <!-- Vídeo remoto: ajustado à área útil, sem distorção -->
+        <ScrollViewer x:Name="VideoScroll" Focusable="False" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Disabled"
+                      HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" ScrollChanged="OnVideoScroll">
+            <appControls:AdaptiveDesktopImage x:Name="RemoteImage" Source="{Binding Frame}" EnhancedFit="{Binding ImageFit.EnhancedWindowFit}" SharpnessPercent="{Binding ImageFit.SharpnessPercent}"
+                                             SnapsToDevicePixels="True" UseLayoutRounding="True" Focusable="True" />
+        </ScrollViewer>
+
+        <Grid x:Name="ControlsOverlay" Panel.ZIndex="20" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="6,4,6,0"
+              MouseEnter="OnControlsEnter" MouseLeave="OnControlsLeave">
+            <Border x:Name="ExpandedControls" Background="#50081020" CornerRadius="4" Padding="3">
+                <WrapPanel MaxWidth="780" VerticalAlignment="Top">
+                    <TextBlock Text="⠿" Foreground="White" Padding="6" Cursor="SizeAll" VerticalAlignment="Center"
+                               ToolTip="Arrastar janela; duplo clique maximiza/restaura" MouseLeftButtonDown="OnDragSession" />
+                    <TextBlock Text="{Binding Title}" Foreground="White" MaxWidth="100" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Margin="2,0,6,0" />
+                    <ToggleButton x:Name="ActualScale" Style="{StaticResource OverlayToggle}" Content="100%" IsChecked="True"
+                                  ToolTip="Pixels originais, sem filtros. Desmarque para ajustar à janela." Click="OnToggleScale" />
+                    <Button x:Name="SharpnessButton" Style="{StaticResource OverlayButton}" Content="Nitidez" Click="OnOpenSharpness" ToolTip="Ajustar nitidez da imagem reduzida" />
+                    <Button x:Name="InfoButton" Style="{StaticResource OverlayButton}" Content="Info" Click="OnOpenInfo" ToolTip="Informações da conexão" />
+                    <Button Style="{StaticResource OverlayButton}" Content="Principal" Click="OnShowMain" ToolTip="Abrir a janela principal e informações das sessões" />
+                    <Button Style="{StaticResource OverlayButton}" Content="Tela cheia" Click="OnToggleFullScreen" ToolTip="Alternar tela cheia (Ctrl+Alt+F11)" />
+                    <Button Style="{StaticResource OverlayButton}" Content="—" Click="OnMinimizeSession" ToolTip="Minimizar acesso" />
+                    <Button Style="{StaticResource OverlayButton}" Content="□" Click="OnMaximizeSession" ToolTip="Maximizar/restaurar sem ocultar a barra do Windows" />
+                    <Button Style="{StaticResource OverlayButton}" Content="×" Click="OnCloseSession" ToolTip="Fechar e desconectar este acesso" />
+                    <Button Style="{StaticResource OverlayButton}" Content="▴" Click="OnHideControls" ToolTip="Recolher controles" />
+                </WrapPanel>
+            </Border>
+            <Button x:Name="CollapsedControls" Style="{StaticResource OverlayButton}" Content="NexoDesk ▾" Visibility="Collapsed"
+                    Click="OnShowControls" ToolTip="Mostrar controles do acesso (Ctrl+Alt+Home)" />
+        </Grid>
             <Popup x:Name="SharpnessPopup" PlacementTarget="{Binding ElementName=SharpnessButton}" Placement="Bottom"
                    StaysOpen="False" AllowsTransparency="True" Closed="OnSharpnessClosed" PreviewKeyDown="OnSharpnessKeyDown">
                 <Border Background="{DynamicResource Nx.Surface}" BorderBrush="{DynamicResource Nx.Border}" BorderThickness="1"
@@ -37,47 +90,19 @@
                     </StackPanel>
                 </Border>
             </Popup>
-            <Button Style="{DynamicResource Nx.Button.Navy}" Content="Desconectar" Command="{Binding DisconnectCommand}" Margin="0,0,4,0" />
-        </StackPanel>
-    </ui:NxWindow.TitleBarContent>
-
-    <ui:NxWindow.FooterContent>
-        <TextBlock>
-            <Run Text="{Binding ServerName, Mode=OneWay}" /> <Run Text="·" /> <Run Text="{Binding Protocol, Mode=OneWay}" />
-            <Run Text="·" /> <Run Text="Agent" /> <Run Text="{Binding AgentVersion, Mode=OneWay}" />
-            <Run Text="·" /> <Run Text="Sessão" /> <Run Text="{Binding SessionId, Mode=OneWay}" FontFamily="{DynamicResource Nx.Mono}" />
-        </TextBlock>
-    </ui:NxWindow.FooterContent>
-
-    <ui:NxWindow.FooterRightContent>
-        <StackPanel Orientation="Horizontal">
-            <TextBlock VerticalAlignment="Center">
-                <Run Text="{Binding FitStatus, ElementName=RemoteImage, Mode=OneWay}" /> <Run Text=" · Modo:" /> <Run Text="{Binding ModeText, Mode=OneWay}" Foreground="{DynamicResource Nx.OnNavy}" />
-            </TextBlock>
-            <Button Style="{DynamicResource Nx.FooterLink}" Content="Tela cheia" Margin="14,0,0,0"
-                    Click="OnToggleFullScreen" ToolTip="Tela cheia neste monitor (Ctrl+Alt+F11). O ajuste 100% permanece como está." />
-        </StackPanel>
-    </ui:NxWindow.FooterRightContent>
-
-    <Grid Background="#05070C" ClipToBounds="True">
-        <Border Panel.ZIndex="8" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="12" Padding="10,6"
-                CornerRadius="4" Background="{DynamicResource Nx.Navy}" IsHitTestVisible="False">
-            <TextBlock Text="{Binding ControlStatus}" Foreground="{DynamicResource Nx.OnNavy}" FontSize="12" TextWrapping="Wrap" MaxWidth="520" />
-        </Border>
-        <!-- Vídeo remoto: ajustado à área útil, sem distorção -->
-        <ScrollViewer x:Name="VideoScroll" Focusable="False" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Disabled"
-                      HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" ScrollChanged="OnVideoScroll">
-            <appControls:AdaptiveDesktopImage x:Name="RemoteImage" Source="{Binding Frame}" EnhancedFit="{Binding ImageFit.EnhancedWindowFit}" SharpnessPercent="{Binding ImageFit.SharpnessPercent}"
-                                             SnapsToDevicePixels="True" UseLayoutRounding="True" Focusable="True" />
-        </ScrollViewer>
-
-        <!-- Saída sempre acessível quando a moldura normal está oculta. -->
-        <Border Panel.ZIndex="10" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="12"
-                Visibility="{Binding IsFullScreen, RelativeSource={RelativeSource AncestorType={x:Type ui:NxWindow}}, Converter={StaticResource BoolToVisibility}}">
-            <Button Style="{DynamicResource Nx.Button.Navy}" Content="Sair da tela cheia"
-                    Click="OnToggleFullScreen" ToolTip="Ctrl+Alt+F11. A sessão continua aberta." />
-        </Border>
-
+        <Popup x:Name="InfoPopup" PlacementTarget="{Binding ElementName=InfoButton}" Placement="Bottom" StaysOpen="False"
+               AllowsTransparency="True" Closed="OnInfoClosed" PreviewKeyDown="OnInfoKeyDown">
+            <Border Background="{DynamicResource Nx.Surface}" BorderBrush="{DynamicResource Nx.Border}" BorderThickness="1" CornerRadius="4" Width="360" Padding="18" Margin="0,6,0,0">
+                <StackPanel>
+                    <TextBlock Text="{Binding ServerName}" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource Nx.Text}" />
+                    <TextBlock Text="{Binding ControlStatus}" Style="{DynamicResource Nx.Hint}" />
+                    <TextBlock Text="{Binding ConnectionDetail}" Style="{DynamicResource Nx.Hint}" />
+                    <TextBlock Text="{Binding DisplayText}" Style="{DynamicResource Nx.Hint}" />
+                    <TextBlock Text="{Binding FitStatus, ElementName=RemoteImage}" Style="{DynamicResource Nx.Hint}" />
+                    <Button x:Name="InfoCloseButton" Content="Concluir" Style="{DynamicResource Nx.Button.Small}" HorizontalAlignment="Right" Margin="0,12,0,0" Click="OnCloseInfo" />
+                </StackPanel>
+            </Border>
+        </Popup>
         <!-- Ponteiro do PC REMOTO: desenhado por cima da imagem, posicionado no código. -->
         <Canvas x:Name="CursorLayer" IsHitTestVisible="False">
             <Path x:Name="CursorArrow" Visibility="Collapsed"
@@ -88,16 +113,6 @@
                 </Path.Effect>
             </Path>
         </Canvas>
-
-        <!-- Aviso: conectado em "Só ver" (mouse/teclado não comandam) -->
-        <Border VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,12,0,0" CornerRadius="6" Padding="16,8"
-                Background="{DynamicResource Nx.WarningSoft}" BorderBrush="{DynamicResource Nx.WarningBorder}" BorderThickness="1">
-            <Border.Visibility>
-                <Binding Path="ViewOnly" Converter="{StaticResource BoolToVisibility}" />
-            </Border.Visibility>
-            <TextBlock Foreground="{DynamicResource Nx.WarningText}" FontSize="12.5" TextWrapping="Wrap"
-                       Text="Você está só vendo. Para usar mouse e teclado, desconecte e conecte de novo no modo Controlar." />
-        </Border>
 
         <!-- Conectado, ainda sem vídeo -->
         <Border HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="520" Padding="28,26">

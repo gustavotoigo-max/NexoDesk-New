@@ -27,6 +27,9 @@ public class NxWindow : Window
         DependencyProperty.Register(nameof(IsFullScreen), typeof(bool), typeof(NxWindow),
             new PropertyMetadata(false, (owner, _) => ((NxWindow)owner).UpdateMaximizedMargin()));
 
+    public static readonly DependencyProperty ShowTitleBarProperty =
+        DependencyProperty.Register(nameof(ShowTitleBar), typeof(bool), typeof(NxWindow), new PropertyMetadata(true));
+
     public static readonly DependencyProperty ShowFooterProperty =
         DependencyProperty.Register(nameof(ShowFooter), typeof(bool), typeof(NxWindow), new PropertyMetadata(true));
 
@@ -82,6 +85,13 @@ public class NxWindow : Window
     {
         get => (bool)GetValue(IsFullScreenProperty);
         set => SetValue(IsFullScreenProperty, value);
+    }
+
+    /// <summary>Permite ao viewer usar controles sobrepostos sem reservar linhas para título/acento.</summary>
+    public bool ShowTitleBar
+    {
+        get => (bool)GetValue(ShowTitleBarProperty);
+        set => SetValue(ShowTitleBarProperty, value);
     }
 
     public bool ShowFooter

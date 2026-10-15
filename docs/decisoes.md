@@ -15,4 +15,6 @@
 - 1.5.0: dois ADMINs veem a mesma tela; atividade nova transfere controle sem desconectar observadores. Atividade física também participa, sem bloquear hardware. Modo anterior de um ADMIN selecionável. Detalhes/limites em docs/acesso-simultaneo.md.
 - 1.6.0: nitidez GPU de 0–100%, prévia imediata, padrão anterior 35%, restauração e preferência compartilhada/salva. Zero desliga reforço; botão 100% mantém pixels originais. Ajuste anterior permanece selecionável. Ferramenta de comparação mede fidelidade/contraste; conforto visual depende da avaliação nos PCs.
 
-Versão atual 1.6.0. Compilação e 259 testes locais aprovados; validação física, login/UAC e uso prolongado entre PCs permanecem pendentes. Consulte docs/validacao.md. Sem áudio, arquivos, clipboard, múltiplos monitores ou Ctrl+Alt+Del sintetizado.
+- 1.7.0: viewer abre maximizado na área útil, com barra do Windows disponível e 100% inicial. Barras superior/inferior removidas; controles semitransparentes recolhíveis sobre a imagem. Informações na principal/Info. Preservar pixels originais; rolagem continua quando a imagem superar a área física disponível. Janela de ferramentas separada fica como alternativa futura se o usuário não aprovar a sobreposição.
+
+Versão atual 1.7.0. Compilação e 259 testes locais aprovados; validação física, login/UAC e uso prolongado entre PCs permanecem pendentes. Consulte docs/validacao.md. Sem áudio, arquivos, clipboard, múltiplos monitores ou Ctrl+Alt+Del sintetizado.

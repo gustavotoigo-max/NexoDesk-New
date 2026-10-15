@@ -125,6 +125,7 @@ public sealed class SessionViewModel : ObservableObject
     public string Protocol => _session.NegotiatedProtocol.Replace("Tls", "TLS ").Replace("TLS 13", "TLS 1.3").Replace("TLS 12", "TLS 1.2");
     public string Fingerprint => CertificateFingerprint.Short(_session.ServerFingerprint);
     public string ModeText => _session.Accepted.Mode == SessionMode.Control ? "Controlar" : "Visualizar";
+    public string ConnectionDetail => $"{ModeText} · {Protocol} · Latência {LatencyText} · {FpsText} FPS · {DataRateText} · Agente {AgentVersion} · Sessão {SessionId}";
     public string AgentVersion => _session.Server.AppVersion;
 
     public ICommand DisconnectCommand { get; }
@@ -314,15 +315,15 @@ public sealed class SessionViewModel : ObservableObject
     public string LatencyText
     {
         get => _latencyText;
-        private set => Set(ref _latencyText, value);
+        private set { if (Set(ref _latencyText, value)) OnPropertyChanged(nameof(ConnectionDetail)); }
     }
 
-    public string DataRateText { get => _dataRateText; private set => Set(ref _dataRateText, value); }
+    public string DataRateText { get => _dataRateText; private set { if (Set(ref _dataRateText, value)) OnPropertyChanged(nameof(ConnectionDetail)); } }
 
     public string FpsText
     {
         get => _fpsText;
-        private set => Set(ref _fpsText, value);
+        private set { if (Set(ref _fpsText, value)) OnPropertyChanged(nameof(ConnectionDetail)); }
     }
 
     public string DisplayText

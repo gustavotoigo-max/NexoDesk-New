@@ -104,6 +104,30 @@ public class UiRenderTests
                     slider.Value = 80; Assert.Equal(80, imageFit.SharpnessPercent);
                     imageFit.ResetCommand.Execute(null); Assert.Equal(35, slider.Value);
                     imageFit.Flush();
+                    stage = "viewer sobreposto " + suffix;
+                    var viewer = new SessionWindow();
+                    Assert.False(viewer.ShowTitleBar); Assert.False(viewer.ShowFooter); Assert.False(viewer.IsFullScreen);
+                    Assert.Equal(WindowState.Maximized, viewer.WindowState); Assert.False(viewer.Topmost);
+                    Assert.Equal(0, System.Windows.Shell.WindowChrome.GetWindowChrome(viewer).CaptionHeight);
+                    var sessionPreview = new PreviewSession();
+                    var image = (AdaptiveDesktopImage)viewer.FindName("RemoteImage");
+                    image.ActualSize = true; image.Width = 1280; image.Height = 720;
+                    Assert.True(((System.Windows.Controls.Primitives.ToggleButton)viewer.FindName("ActualScale")).IsChecked);
+                    var sessionContent = (Grid)RenderContent(viewer, sessionPreview, $"session-overlay-{suffix}.png", 1280, 720);
+                    Assert.Empty(sessionContent.RowDefinitions); Assert.Equal(720, sessionContent.ActualHeight);
+                    Assert.Equal(1280, image.Layout.PixelWidth); Assert.Equal(720, image.Layout.PixelHeight);
+                    var overlay = (Grid)viewer.FindName("ControlsOverlay");
+                    Assert.InRange(overlay.ActualHeight, 25, 80);
+                    viewer.HideControls(); sessionContent.UpdateLayout();
+                    Assert.Equal(Visibility.Visible, ((Button)viewer.FindName("CollapsedControls")).Visibility);
+                    Assert.Equal(720, image.Layout.PixelHeight); // recolher não muda escala/área útil
+                    var collapsedImage = new RenderTargetBitmap(1280,720,96,96,PixelFormats.Pbgra32); collapsedImage.Render(sessionContent);
+                    var collapsedPng = new PngBitmapEncoder(); collapsedPng.Frames.Add(BitmapFrame.Create(collapsedImage));
+                    using (var file = File.Create(Path.Combine(output, $"session-collapsed-{suffix}.png"))) collapsedPng.Save(file);
+                    viewer.ShowControls(); sessionContent.UpdateLayout();
+                    Assert.Equal(Visibility.Collapsed, ((Button)viewer.FindName("CollapsedControls")).Visibility);
+                    viewer.Close();
+                    stage = "diálogos " + suffix;
                     var pair = new AddComputerWindow();
                     RenderContent(pair, new PreviewPairing(), $"pairing-{suffix}.png", 660, 550);
                     Assert.True(pair.AddressBox.ActualWidth >= 580);
@@ -162,6 +186,13 @@ public class UiRenderTests
                     preview.Close();
                 }
 
+                stage = "moldura sem barras";
+                var noBars = new NxWindow { ShowTitleBar = false, ShowFooter = false, Template = template };
+                noBars.ApplyTemplate();
+                Assert.Equal(0, ((RowDefinition)template.FindName("CaptionRow", noBars)).Height.Value);
+                Assert.Equal(0, ((RowDefinition)template.FindName("AccentRow", noBars)).Height.Value);
+                Assert.Equal(Visibility.Collapsed, ((Border)template.FindName("Footer", noBars)).Visibility);
+                Assert.False(noBars.IsFullScreen); noBars.Close();
                 stage = "encerramento";
                 app.Shutdown();
             }
@@ -172,6 +203,34 @@ public class UiRenderTests
         thread.Start();
         Assert.True(thread.Join(TimeSpan.FromSeconds(30)), $"Renderização não terminou: {stage}.");
         if (failure is not null) throw new InvalidOperationException($"Falha em {stage}.", failure);
+    }
+
+    public sealed class PreviewSession
+    {
+        public string Title => "PC de trabalho";
+        public string ServerName => Title;
+        public string ControlStatus => "Você controla";
+        public string ConnectionDetail => "Controlar · TLS 1.3 · Latência 8 ms · 30 FPS · Agente 1.7.0";
+        public string DisplayText => "1280 × 720";
+        public bool ShowWaiting => false;
+        public bool ViewOnly => false;
+        public bool IsEnded => false;
+        public ImageFitViewModel ImageFit { get; } = new(new AdminSettings(), (_, _) => { });
+        public BitmapSource Frame { get; } = CreateFrame();
+        private static BitmapSource CreateFrame()
+        {
+            var drawing = new DrawingVisual();
+            using (var dc = drawing.RenderOpen())
+            {
+                dc.DrawRectangle(Brushes.WhiteSmoke, null, new Rect(0,0,1280,720));
+                for (int i = 0; i < 16; i++)
+                    dc.DrawText(new FormattedText($"Linha {i+1:00}   Pedido 1039   R$ 1.234,56   Texto em tamanho real",
+                        System.Globalization.CultureInfo.GetCultureInfo("pt-BR"), FlowDirection.LeftToRight,
+                        new Typeface("Segoe UI"), 16, Brushes.Black, 1), new Point(30,85+i*31));
+                dc.DrawRectangle(Brushes.DarkSlateGray, null, new Rect(0,680,1280,40));
+            }
+            var frame = new RenderTargetBitmap(1280,720,96,96,PixelFormats.Pbgra32); frame.Render(drawing); frame.Freeze(); return frame;
+        }
     }
 
     public sealed class PreviewSettings

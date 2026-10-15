@@ -13,7 +13,8 @@ namespace NexoDesk.App.Views;
 
 public partial class SessionWindow : NxWindow
 {
-    private readonly SessionViewModel _vm;
+    private readonly SessionViewModel _vm = null!;
+    private readonly System.Windows.Threading.DispatcherTimer _controlsTimer = new() { Interval = TimeSpan.FromSeconds(2.5) };
     private readonly HashSet<Key> _keysDown = [];
     private readonly HashSet<Key> _handoffKeys = [];
     private readonly HashSet<PointerButton> _handoffButtons = [];
@@ -25,13 +26,24 @@ public partial class SessionWindow : NxWindow
     private Rect _previousBounds;
     private WindowChrome? _previousChrome;
     private bool _fullScreenShortcutDown;
+    private bool _controlsShortcutDown;
     private bool _positioningFullScreen;
     private WindowPlacement _previousPlacement;
     private bool _hasPreviousPlacement;
 
-    public SessionWindow(SessionViewModel vm)
+    internal SessionWindow()
     {
         InitializeComponent();
+        _controlsTimer.Tick += (_, _) =>
+        {
+            if (!ControlsOverlay.IsMouseOver && !SharpnessPopup.IsOpen && !InfoPopup.IsOpen) HideControls();
+        };
+        Loaded += (_, _) => _controlsTimer.Start();
+        Closed += (_, _) => _controlsTimer.Stop();
+    }
+
+    public SessionWindow(SessionViewModel vm) : this()
+    {
         _vm = vm;
         DataContext = vm;
         vm.CloseRequested += Close;
@@ -41,6 +53,7 @@ public partial class SessionWindow : NxWindow
         Closed += (_, _) =>
         {
             SharpnessPopup.IsOpen = false;
+            InfoPopup.IsOpen = false;
             vm.ImageFit.Flush();
             vm.DetachPresentation();
             vm.CloseRequested -= Close;
@@ -54,7 +67,7 @@ public partial class SessionWindow : NxWindow
         RemoteImage.MouseDown += OnMouseDown;
         RemoteImage.MouseUp += OnMouseUp;
         RemoteImage.MouseWheel += OnMouseWheel;
-        RemoteImage.MouseEnter += (_, _) => { if (_vm.CanControl) RemoteImage.FocusForRemoteInput(); };
+        RemoteImage.MouseEnter += (_, _) => { if (_vm?.CanControl == true) RemoteImage.FocusForRemoteInput(); };
         PreviewKeyDown += OnKeyDown;
         PreviewKeyUp += OnKeyUp;
         Deactivated += (_, _) => ReleaseHeldInputs();
@@ -97,12 +110,65 @@ public partial class SessionWindow : NxWindow
         return RemoteImage.Layout.TryNormalize(e.GetPosition(RemoteImage), out nx, out ny);
     }
 
+    private void RestartControlsTimer() { _controlsTimer.Stop(); if (IsLoaded) _controlsTimer.Start(); }
+    internal void ShowControls()
+    {
+        ExpandedControls.Visibility = Visibility.Visible; CollapsedControls.Visibility = Visibility.Collapsed;
+        RestartControlsTimer();
+    }
+    internal void HideControls()
+    {
+        if (SharpnessPopup.IsOpen || InfoPopup.IsOpen) return;
+        ExpandedControls.Visibility = Visibility.Collapsed; CollapsedControls.Visibility = Visibility.Visible;
+        _controlsTimer.Stop();
+    }
+    private void OnControlsEnter(object sender, MouseEventArgs e) => ShowControls();
+    private void OnControlsLeave(object sender, MouseEventArgs e) => RestartControlsTimer();
+    private void OnShowControls(object sender, RoutedEventArgs e) { ShowControls(); RestoreRemoteKeyboardFocus(); }
+    private void OnHideControls(object sender, RoutedEventArgs e) { HideControls(); RestoreRemoteKeyboardFocus(); }
+    private void OnShowMain(object sender, RoutedEventArgs e)
+    {
+        ReleaseHeldInputs();
+        var main = Application.Current.Windows.OfType<MainWindow>().FirstOrDefault();
+        if (main is null) return;
+        main.Show(); if (main.WindowState == WindowState.Minimized) main.WindowState = WindowState.Normal;
+        main.Activate();
+    }
+    private void OnOpenInfo(object sender, RoutedEventArgs e)
+    {
+        SharpnessPopup.IsOpen = false;
+        ReleaseHeldInputs(); Keyboard.ClearFocus();
+        InfoPopup.IsOpen = true;
+        Dispatcher.InvokeAsync(() => { if (InfoPopup.IsOpen) InfoCloseButton.Focus(); }, System.Windows.Threading.DispatcherPriority.Input);
+    }
+    private void OnCloseInfo(object sender, RoutedEventArgs e) => InfoPopup.IsOpen = false;
+    private void OnInfoClosed(object? sender, EventArgs e) { RestoreRemoteKeyboardFocus(); RestartControlsTimer(); }
+    private void OnInfoKeyDown(object sender, KeyEventArgs e)
+    { if (e.Key == Key.Escape) { InfoPopup.IsOpen = false; e.Handled = true; } }
+    private void OnMinimizeSession(object sender, RoutedEventArgs e)
+    { if (IsFullScreen) RestoreWindowMode(); WindowState = WindowState.Minimized; }
+    private void OnMaximizeSession(object sender, RoutedEventArgs e)
+    {
+        if (IsFullScreen) RestoreWindowMode();
+        WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+        RestoreRemoteKeyboardFocus();
+    }
+    private void OnCloseSession(object sender, RoutedEventArgs e) => Close();
+    private void OnDragSession(object sender, MouseButtonEventArgs e)
+    {
+        if (IsFullScreen) return;
+        if (e.ClickCount == 2) OnMaximizeSession(sender, e);
+        else if (e.LeftButton == MouseButtonState.Pressed) { ReleaseHeldInputs(); DragMove(); }
+        e.Handled = true;
+    }
+
     private void OnToggleFullScreen(object sender, RoutedEventArgs e) => ToggleFullScreen();
 
     /// <summary>Tela cheia local; não altera resolução, escala nem sessão do PC REMOTO.</summary>
     private void ToggleFullScreen()
     {
         SharpnessPopup.IsOpen = false;
+        InfoPopup.IsOpen = false;
         ReleaseHeldInputs();
         if (IsFullScreen)
         {
@@ -218,7 +284,7 @@ public partial class SessionWindow : NxWindow
 
     private void RestoreRemoteKeyboardFocus()
     {
-        if (_vm.CanControl) RemoteImage.FocusForRemoteInput();
+        if (_vm?.CanControl == true) RemoteImage.FocusForRemoteInput();
     }
 
     private void OnToggleScale(object sender, RoutedEventArgs e)
@@ -230,6 +296,7 @@ public partial class SessionWindow : NxWindow
     private void OnOpenSharpness(object sender, RoutedEventArgs e)
     {
         ReleaseHeldInputs();
+        InfoPopup.IsOpen = false;
         Keyboard.ClearFocus();
         SharpnessOptions.DataContext = _vm.ImageFit;
         SharpnessPopup.IsOpen = true;
@@ -239,8 +306,9 @@ public partial class SessionWindow : NxWindow
     private void OnCloseSharpness(object sender, RoutedEventArgs e) => SharpnessPopup.IsOpen = false;
     private void OnSharpnessClosed(object? sender, EventArgs e)
     {
-        _vm.ImageFit.Flush();
+        _vm?.ImageFit.Flush();
         RestoreRemoteKeyboardFocus();
+        RestartControlsTimer();
     }
     private void OnSharpnessKeyDown(object sender, KeyEventArgs e)
     {
@@ -329,6 +397,8 @@ public partial class SessionWindow : NxWindow
     private void OnKeyDown(object sender, KeyEventArgs e)
     {
         Key key = e.Key == Key.System ? e.SystemKey : e.Key;
+        if (key == Key.Home && (Keyboard.Modifiers & (ModifierKeys.Control | ModifierKeys.Alt)) == (ModifierKeys.Control | ModifierKeys.Alt))
+        { ReleaseHeldInputs(); ShowControls(); _controlsShortcutDown = true; e.Handled = true; return; }
         if (key == Key.F11 && (Keyboard.Modifiers & (ModifierKeys.Control | ModifierKeys.Alt)) == (ModifierKeys.Control | ModifierKeys.Alt))
         {
             if (!e.IsRepeat) ToggleFullScreen();
@@ -343,6 +413,8 @@ public partial class SessionWindow : NxWindow
     private void OnKeyUp(object sender, KeyEventArgs e)
     {
         Key key = e.Key == Key.System ? e.SystemKey : e.Key;
+        if (key == Key.Home && _controlsShortcutDown)
+        { _controlsShortcutDown = false; e.Handled = true; return; }
         if (key == Key.F11 && _fullScreenShortcutDown)
         {
             _fullScreenShortcutDown = false;
@@ -358,7 +430,7 @@ public partial class SessionWindow : NxWindow
         Key key = e.Key == Key.System ? e.SystemKey : e.Key;
         if (action == KeyAction.Down && e.IsRepeat && _handoffKeys.Contains(key)) return true;
         _handoffKeys.Remove(key); // uma soltura ou pressão nova elimina a supressão anterior.
-        if (!_vm.CanControl || !RemoteImage.IsKeyboardFocused)
+        if (!_vm.CanControl || SharpnessPopup.IsOpen || InfoPopup.IsOpen || !RemoteImage.IsKeyboardFocused)
             return false;
         if (action == KeyAction.Down) _keysDown.Add(key); else _keysDown.Remove(key);
         int vk = KeyInterop.VirtualKeyFromKey(key);
@@ -403,7 +475,7 @@ public partial class SessionWindow : NxWindow
     protected override void OnClosing(CancelEventArgs e)
     {
         base.OnClosing(e);
-        if (!e.Cancel && !_vm.IsEnded)
+        if (!e.Cancel && _vm is { IsEnded: false })
             _ = _vm.DisconnectAsync();
     }
 }

@@ -175,6 +175,27 @@
                 </StackPanel>
             </Border>
 
+            <Border Style="{DynamicResource Nx.Section}" Margin="0,0,0,14" Visibility="{Binding HasActiveSessions, Converter={StaticResource BoolToVisibility}}">
+                <StackPanel>
+                    <TextBlock Style="{DynamicResource Nx.SectionLabel}" Text="SESSÕES ATIVAS" />
+                    <ItemsControl ItemsSource="{Binding Sessions}">
+                        <ItemsControl.ItemTemplate><DataTemplate>
+                            <Grid Margin="0,0,0,12">
+                                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,16,0">
+                                    <TextBlock Text="{Binding ServerName}" FontWeight="SemiBold" />
+                                    <TextBlock Text="{Binding ControlStatus}" Style="{DynamicResource Nx.Hint}" />
+                                    <TextBlock Text="{Binding ConnectionDetail}" Style="{DynamicResource Nx.Hint}" />
+                                    <TextBlock Text="{Binding DisplayText}" Style="{DynamicResource Nx.Hint}" />
+                                </StackPanel>
+                                <Button Grid.Column="1" Content="Voltar ao acesso" Style="{DynamicResource Nx.Button.Small}" VerticalAlignment="Top"
+                                        Command="{Binding DataContext.OpenSessionCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}" />
+                            </Grid>
+                        </DataTemplate></ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
             <!-- Registro -->
             <Border Style="{DynamicResource Nx.Section}">
                 <StackPanel>

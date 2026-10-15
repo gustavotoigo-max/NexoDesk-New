@@ -1,8 +1,8 @@
-# Ajuste da imagem em janela — 1.6.0
+# Ajuste da imagem em janela — 1.7.0
 
 ## Uso
 
-Desmarque o botão **100%** para ajustar à janela. Clique em **Nitidez** e mova a barra de **0–100%**, com prévia imediata. **Concluir**, Esc ou clicar fora fecha o painel; o foco de teclado volta à imagem. O monitor remoto mantém sua resolução.
+Desde a 1.7.0, a sessão abre em 100%, sem reservar barras superior/inferior; controles ficam sobrepostos. Desmarque o botão **100%** para ajustar à janela. Clique em **Nitidez** e mova a barra de **0–100%**, com prévia imediata. **Concluir**, Esc ou clicar fora fecha o painel; o foco de teclado volta à imagem. O monitor remoto mantém sua resolução.
 
 - **0% de nitidez:** redução cúbica sem reforço adicional; não desliga o redimensionamento.
 - **35%:** padrão anterior. **Restaurar padrão (35%)** também reativa a melhoria.
@@ -12,7 +12,7 @@ Desmarque o botão **100%** para ajustar à janela. Clique em **Nitidez** e mova
 
 **Configurações → Imagem em janela** usa a mesma preferência. Todas as sessões abertas do ADMIN atualizam juntas. A prévia não grava a cada movimento: há gravação após 300 ms de pausa e ao fechar o painel, a sessão, as configurações ou sair/atualizar. Configurações antigas recebem 35% sem mudar sua escolha de melhoria ligada/desligada.
 
-O rodapé informa GPU, intensidade e escala efetiva quando o filtro está ativo. Escala inferior a 100% indica que mais pixels remotos estão sendo acomodados na área útil local. DPI e barras da janela fazem diferença mesmo com monitores de mesma resolução. Não foi confirmada a causa exata da diferença percebida em relação ao TeamViewer.
+O botão **Info** informa GPU, intensidade e escala efetiva quando o filtro está ativo. Escala inferior a 100% indica que mais pixels remotos estão sendo acomodados na área útil local. DPI e barras da janela fazem diferença mesmo com monitores de mesma resolução. Não foi confirmada a causa exata da diferença percebida em relação ao TeamViewer.
 
 ## Implementação
 
